@@ -1,0 +1,18 @@
+<div class="d-flex mb-3">
+<input class="form-control" type="text" name="domain_name" placeholder="example.com" placeholder="{{ 'Enter your domain name to transfer'|trans }}">								  
+</div>
+<div class="card text-white bg-info mb-3">
+  <div class="card-header">DNS Hosting Setup</div>
+  <div class="card-body">
+    <h5 class="card-title">Important Instructions</h5>
+    <p class="card-text">In order for the DNS hosting to work, please point your domain to our DNS servers:</p>
+    <ul>
+      <li>ns1.example.com</li>
+      <li>ns2.example.com</li>
+      <li>ns3.example.com</li>
+    </ul>
+  </div>
+</div>
+
+<input type="hidden" name="id" value="{{ product.id }}"/>
+<input type="hidden" name="action" value="register" id="dns-action"/>

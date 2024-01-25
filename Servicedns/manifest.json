@@ -1,0 +1,8 @@
+{
+  "id": "servicedns",
+  "type": "mod",
+  "name": "DNS Hosting Product",
+  "description": "A simple product type to allow you to offer DNS hosting",
+  "icon_url": "icon.svg",
+  "version": "1.0.0"
+}
