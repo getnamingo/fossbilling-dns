@@ -258,6 +258,7 @@ class Service implements InjectionAwareInterface
             `id` bigint(20) NOT NULL AUTO_INCREMENT UNIQUE,
             `client_id` bigint(20) NOT NULL,
             `domain_name` varchar(75),
+            `provider_id` varchar(11),
             `config` text NOT NULL,
             `created_at` datetime,
             `updated_at` datetime,
@@ -275,6 +276,17 @@ class Service implements InjectionAwareInterface
             `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`),
             FOREIGN KEY (`domain_id`) REFERENCES `service_domain`(`id`) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
+        CREATE TABLE IF NOT EXISTS `service_dns_providers` (
+            `id` bigint(20) NOT NULL AUTO_INCREMENT,
+            `name` varchar(255) NOT NULL,
+            `host` varchar(255) NOT NULL,
+            `api_key` varchar(255) NOT NULL,
+            `api_password` varchar(255) NOT NULL,
+            `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            FOREIGN KEY (`domain_id`) REFERENCES `service_domain`(`id`) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;';
         $this->di['db']->exec($sql);
 
@@ -288,6 +300,7 @@ class Service implements InjectionAwareInterface
     {
         $this->di['db']->exec('DROP TABLE IF EXISTS `service_dns_records`');
         $this->di['db']->exec('DROP TABLE IF EXISTS `service_dns`');
+        $this->di['db']->exec('DROP TABLE IF EXISTS `service_dns_providers`');
 
         return true;
     }
