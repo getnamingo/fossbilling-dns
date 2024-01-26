@@ -33,14 +33,15 @@ class Service implements InjectionAwareInterface
         // Example logic to choose the provider
         // This could be based on configuration, user input, etc.
         $providerName = 'Desec'; // This is just an example
+        $apiToken = ''; // This is just an example
 
         switch ($providerName) {
             case 'Desec':
-                $this->dnsProvider = new Providers\Desec();
+                $this->dnsProvider = new Providers\Desec($apiToken);
                 break;
             // Add more cases for additional providers
             default:
-                throw new \Exception("Unknown DNS provider: {$providerName}");
+                throw new \FOSSBilling\Exception("Unknown DNS provider: {$providerName}");
         }
     }
 
@@ -77,6 +78,13 @@ class Service implements InjectionAwareInterface
         $model->domain_name = $domainName;
         $model->updated_at = date('Y-m-d H:i:s');
         $this->di['db']->store($model);
+        
+        $this->chooseDnsProvider();
+        if ($this->dnsProvider === null) {
+            throw new \FOSSBilling\Exception("DNS provider is not set.");
+        }
+
+        $this->dnsProvider->createDomain($domainName);
 
         return true;
     }
@@ -109,6 +117,13 @@ class Service implements InjectionAwareInterface
 
     public function delete(?OODBBean $order, ?OODBBean $model): void
     {
+        $this->chooseDnsProvider();
+        if ($this->dnsProvider === null) {
+            throw new \FOSSBilling\Exception("DNS provider is not set.");
+        }
+
+        $this->dnsProvider->deleteDomain($domainName);
+
         if (is_object($model)) {
             $this->di['db']->trash($model);
         }
@@ -129,8 +144,6 @@ class Service implements InjectionAwareInterface
      * Used to add a DNS record for a specified domain.
      *
      * @param array $data An array containing the necessary information for adding a DNS record.
-     *                    The 'domain_name' must be provided:
-     *                    - string 'domain_name' The name of the domain to which the DNS record will be added.
      * 
      * @return bool Returns true on successful addition of the DNS record, false otherwise.
      */
@@ -142,20 +155,12 @@ class Service implements InjectionAwareInterface
         if ($this->dnsProvider === null) {
             throw new \FOSSBilling\Exception("DNS provider is not set.");
         }
-        
-        throw new \FOSSBilling\Exception('Domain does not exist');
-        return true;
-        
-        if (empty($data['domain']) && empty($data['order_id'])) {
-            throw new \FOSSBilling\Exception('You must provide either the API key or API key order ID in order to reset it.');
-        } elseif (!empty($data['order_id'])) {
+              
+        if (!empty($data['order_id'])) {
             $order = $this->di['db']->getExistingModelById('ClientOrder', $data['order_id'], 'Order not found');
             $orderService = $this->di['mod_service']('order');
             $model = $orderService->getOrderService($order);
-        } else {
-            $model = $this->di['db']->findOne('service_dns', 'domain_name = :domain_name', [':domain_name' => $data['domain']]);
         }
-
         if (is_null($model)) {
             throw new \FOSSBilling\Exception('Domain does not exist');
         }
@@ -168,12 +173,18 @@ class Service implements InjectionAwareInterface
         }
 
         if (!is_null($client) && $client->id !== $model->client_id) {
-            throw new \FOSSBilling\Exception('API key does not exist');
+            throw new \FOSSBilling\Exception('Domain does not exist');
         }
 
         $config = json_decode($model->config, true);
+        $rrsetData = [
+            'subname' => $data['record_name'],
+            'type' => $data['record_type'],
+            'ttl' => (int) $data['record_ttl'],
+            'records' => [$data['record_value']]
+        ];
 
-        //$model->domain_name = $this->generateKey($config);
+        $this->dnsProvider->createRRset($config['domain_name'], $rrsetData);
         $model->updated_at = date('Y-m-d H:i:s');
         $this->di['db']->store($model);
 
@@ -184,62 +195,27 @@ class Service implements InjectionAwareInterface
      * Used to delete a DNS record for a specified domain.
      *
      * @param array $data An array containing the identification information of the DNS record to be deleted.
-     *                    One or more of the following parameters must be provided:
-     *                    - int 'record_id' (optional) The unique ID of the DNS record to delete.
-     *                    - string 'domain_name' (optional) The domain name associated with the DNS record to delete.
-     *                    - string 'record_type' (optional) The type of the DNS record (e.g., A, MX, CNAME) to delete.
-     *                    - string 'host' (optional) The host name for the DNS record to delete.
      *
      * @return bool Returns true if the DNS record was successfully deleted, false otherwise.
      */
     public function delRecord(array $data): bool
     {
-        throw new \FOSSBilling\Exception('Domain does not exist');
-        
-        
-        if (empty($data['domain']) && empty($data['order_id'])) {
-            throw new \FOSSBilling\Exception('You must provide either the API key or API key order ID in order to reset it.');
-        } elseif (!empty($data['order_id'])) {
-            $order = $this->di['db']->getExistingModelById('ClientOrder', $data['order_id'], 'Order not found');
-            $orderService = $this->di['mod_service']('order');
-            $model = $orderService->getOrderService($order);
-        } else {
-            $model = $this->di['db']->findOne('service_dns', 'domain_name = :domain_name', [':domain_name' => $data['domain']]);
-        }
-
-        if (is_null($model)) {
-            throw new \FOSSBilling\Exception('Domain does not exist');
-        }
-
-        try {
-            $this->di['is_client_logged'];
-            $client = $this->di['loggedin_client'];
-        } catch (\Exception) {
-            $client = null;
-        }
-
-        if (!is_null($client) && $client->id !== $model->client_id) {
-            throw new \FOSSBilling\Exception('API key does not exist');
-        }
-
-        $config = json_decode($model->config, true);
-
-        //$model->domain_name = $this->generateKey($config);
-        $model->updated_at = date('Y-m-d H:i:s');
-        $this->di['db']->store($model);
-
+        throw new \FOSSBilling\Exception('Not yet implemented');
         return true;
     }
 
     /**
-     * Used to update an API key, but prevents changing the API key so we can ensure they use the reset function.
+     * Used to update a DNS record for a specified domain.
      *
-     * @param array $data An array containing what API key to update and what info to update.
-     *                    - int 'order_id' The order ID of the API key to update.
-     *                    - array 'config' (optional) The new config to attach to the API key.
+     * @param array $data An array containing the identification information of the DNS record to be updated.
+     *
+     * @return bool Returns true if the DNS record was successfully updated, false otherwise.
      */
-    public function updateDomain(array $data): bool
+    public function updateRecord(array $data): bool
     {
+        throw new \FOSSBilling\Exception('Not yet implemented');
+        return true;
+        
         if (empty($data['order_id'])) {
             throw new \FOSSBilling\Exception('You must provide the API key order ID in order to update it.');
         }

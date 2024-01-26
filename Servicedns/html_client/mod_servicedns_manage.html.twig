@@ -6,10 +6,11 @@
     <div class="card-body">
         <h3>{{ 'DNS Record Management'|trans }}</h3>
         
-        <form id="addRecordForm" class="mb-4">
+        <form class="mb-4 api-form" method="post" action="{{ 'api/client/servicedns/add'|link }}" data-api-msg="{{ 'New record added'|trans }}">
+          <input type="hidden" name="CSRFToken" value="{{ CSRFToken }}"/>
             <div class="row g-3">
                 <div class="col-md">
-                    <select class="form-select" required>
+                    <select class="form-select" name="record_type" required>
                         <option value="" disabled selected>Select Type</option>
                         <option value="A">A</option>
                         <option value="AAAA">AAAA</option>
@@ -21,16 +22,17 @@
                     </select>
                 </div>
                 <div class="col-md">
-                    <input type="text" class="form-control" placeholder="Name" required>
+                    <input type="text" class="form-control" placeholder="example." name="record_name" required>
                 </div>
                 <div class="col-md">
-                    <input type="text" class="form-control" placeholder="Value" required>
+                    <input type="text" class="form-control" placeholder="127.0.0.1" name="record_value" required>
                 </div>
                 <div class="col-md-2">
-                    <input type="number" class="form-control" placeholder="TTL" required>
+                    <input type="number" class="form-control" placeholder="TTL" name="record_ttl" value="600" required>
                 </div>
                 <div class="col-md-auto">
-                    <button type="button" class="btn btn-primary" id="dns-addrecord">{{ 'Add Record'|trans }}</button>
+                    <input type="hidden" name="order_id" value="{{ order.id }}">
+                    <button class="btn btn-primary" type="submit" value="{{ 'Add Record'|trans }}">{{ 'Add Record'|trans }}</button>
                 </div>
             </div>
         </form>
@@ -51,26 +53,4 @@
         </table>
     </div>
 </div>
-
-<script type="text/javascript">
-    document.querySelector('#dns-addrecord').addEventListener('click', (event) => {
-        event.preventDefault();
-
-        if (confirm("{{ 'Are you sure?'|trans }}")) {
-            API.client.post('servicedns/add', { order_id: {{ order.id }} }, function(result) {
-                bb.reload();
-            });
-        }
-    });
-    
-    document.querySelector('#dns-delrecord').addEventListener('click', (event) => {
-        event.preventDefault();
-
-        if (confirm("{{ 'Are you sure?'|trans }}")) {
-            API.client.post('servicedns/del', { order_id: {{ order.id }} }, function(result) {
-                bb.reload();
-            });
-        }
-    });
-</script>
 {% endif %}
