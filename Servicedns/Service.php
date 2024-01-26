@@ -187,6 +187,19 @@ class Service implements InjectionAwareInterface
         $this->dnsProvider->createRRset($config['domain_name'], $rrsetData);
         $model->updated_at = date('Y-m-d H:i:s');
         $this->di['db']->store($model);
+        
+        $records = $this->di['db']->dispense('service_dns_records');
+        $domainName = isset($order->config) ? json_decode($order->config)->domain_name : null;
+        $domain_id = $this->di['db']->findOne('service_dns', 'domain_name = :domain_name', [':domain_name' => $domainName]);
+        $records->domain_id = $domain_id['id'];
+        $records->type = $data['record_type'];
+        $records->host = $data['record_name'];
+        $records->value = $data['record_value'];
+        $records->ttl = (int) $data['record_ttl'];
+        $records->priority = 0;
+        $records->created_at = date('Y-m-d H:i:s');
+        $records->updated_at = date('Y-m-d H:i:s');
+        $this->di['db']->store($records);
 
         return true;
     }
