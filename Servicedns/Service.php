@@ -16,6 +16,7 @@ use RedBeanPHP\OODBBean;
 class Service implements InjectionAwareInterface
 {
     protected ?\Pimple\Container $di = null;
+    private $dnsProvider;
 
     public function setDi(\Pimple\Container $di): void
     {
@@ -25,6 +26,22 @@ class Service implements InjectionAwareInterface
     public function getDi(): ?\Pimple\Container
     {
         return $this->di;
+    }
+    
+    // Method to dynamically choose and set the DNS provider
+    private function chooseDnsProvider() {
+        // Example logic to choose the provider
+        // This could be based on configuration, user input, etc.
+        $providerName = 'Desec'; // This is just an example
+
+        switch ($providerName) {
+            case 'Desec':
+                $this->dnsProvider = new Providers\Desec();
+                break;
+            // Add more cases for additional providers
+            default:
+                throw new \Exception("Unknown DNS provider: {$providerName}");
+        }
     }
 
     public function attachOrderConfig(\Model_Product $product, array $data): array
@@ -119,6 +136,13 @@ class Service implements InjectionAwareInterface
      */
     public function addRecord(array $data): bool
     {
+        $this->chooseDnsProvider();
+
+        // Check if DNS provider is set
+        if ($this->dnsProvider === null) {
+            throw new \FOSSBilling\Exception("DNS provider is not set.");
+        }
+        
         throw new \FOSSBilling\Exception('Domain does not exist');
         return true;
         
