@@ -13,14 +13,29 @@ namespace Box\Mod\Servicedns\Api;
 class Client extends \Api_Abstract
 {
     /**
-     * Used to reset / regenerate an API key. Useful in the event one is accidentally leaked.
+     * Used to add a DNS record for a specified domain.
      *
-     * @param array $data - An associative array containing either the key or ID of whatever API key you want to reset.
-     *                    - string 'key' The API key to reset.
-     *                    - int 'order_id' The order ID of the API key to reset.
+     * @param array $data An array containing the necessary information for adding a DNS record.
+     *                    The 'domain_name' must be provided:
+     *                    - string 'domain_name' The name of the domain to which the DNS record will be added.
      */
-    public function reset($data): bool
+    public function add($data): bool
     {
-        return $this->getService()->resetDomain($data);
+        return $this->getService()->addRecord($data);
+    }
+
+    /**
+     * Used to delete a DNS record for a specified domain.
+     *
+     * @param array $data An array containing the identification information of the DNS record to be deleted.
+     *                    One or more of the following parameters must be provided:
+     *                    - int 'record_id' (optional) The unique ID of the DNS record to delete.
+     *                    - string 'domain_name' (optional) The domain name associated with the DNS record to delete.
+     *                    - string 'record_type' (optional) The type of the DNS record (e.g., A, MX, CNAME) to delete.
+     *                    - string 'host' (optional) The host name for the DNS record to delete.
+     */
+    public function del($data): bool
+    {
+        return $this->getService()->delRecord($data);
     }
 }

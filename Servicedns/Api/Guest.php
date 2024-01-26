@@ -12,25 +12,5 @@ namespace Box\Mod\Servicedns\Api;
 
 class Guest extends \Api_Abstract
 {
-    /**
-     * Checks if an API key is valid or not.
-     *
-     * @param array $data
-     *                    - 'key' What API key to check
-     */
-    public function check($data)
-    {
-        return $this->getService()->isValid($data);
-    }
 
-    /**
-     * Gets the information tied to an API key such as it's validity and any custom parameters tied to it.
-     *
-     * @param array $data
-     *                    - 'key' What API key to check & get custom parameters for
-     */
-    public function get_info($data)
-    {
-        return $this->getService()->getInfo($data);
-    }
 }

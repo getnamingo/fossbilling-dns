@@ -109,76 +109,70 @@ class Service implements InjectionAwareInterface
     }
 
     /**
-     * Checks if an API key is valid or not.
+     * Used to add a DNS record for a specified domain.
      *
-     *                    - 'key' What API key to check
+     * @param array $data An array containing the necessary information for adding a DNS record.
+     *                    The 'domain_name' must be provided:
+     *                    - string 'domain_name' The name of the domain to which the DNS record will be added.
+     * 
+     * @return bool Returns true on successful addition of the DNS record, false otherwise.
      */
-    public function isValid(array $data): bool
+    public function addRecord(array $data): bool
     {
-        if (empty($data['domain'])) {
-            throw new \FOSSBilling\Exception('You must provide an API key to check it\'s validity.');
+        throw new \FOSSBilling\Exception('Domain does not exist');
+        return true;
+        
+        if (empty($data['domain']) && empty($data['order_id'])) {
+            throw new \FOSSBilling\Exception('You must provide either the API key or API key order ID in order to reset it.');
+        } elseif (!empty($data['order_id'])) {
+            $order = $this->di['db']->getExistingModelById('ClientOrder', $data['order_id'], 'Order not found');
+            $orderService = $this->di['mod_service']('order');
+            $model = $orderService->getOrderService($order);
+        } else {
+            $model = $this->di['db']->findOne('service_dns', 'domain_name = :domain_name', [':domain_name' => $data['domain']]);
         }
 
-        $model = $this->di['db']->findOne('service_dns', 'domain_name = :domain_name', [':domain_name' => $data['domain']]);
-        if (is_null($model)) {
-            throw new \FOSSBilling\Exception('API key does not exist');
-        }
-
-        return $this->isActive($model);
-    }
-
-    /**
-     * Checks if an API key is valid or not and returns that + any configured custom parameters.
-     *
-     *                    - 'key' What API key to check
-     */
-    public function getInfo(array $data): array
-    {
-        if (empty($data['domain'])) {
-            throw new \FOSSBilling\Exception('You must provide an API key to check it\'s validity.');
-        }
-
-        $model = $this->di['db']->findOne('service_dns', 'domain_name = :domain_name', [':domain_name' => $data['domain']]);
         if (is_null($model)) {
             throw new \FOSSBilling\Exception('Domain does not exist');
         }
 
-        // Load the stored JSON config from the DB
-        $rawConfig = json_decode($model->config, true);
-        $strippedConfig = [];
-        if (!is_array($rawConfig)) {
-            $rawConfig = [];
+        try {
+            $this->di['is_client_logged'];
+            $client = $this->di['loggedin_client'];
+        } catch (\Exception) {
+            $client = null;
         }
 
-        // Then loop through it and only select the custom parameters, removing the 'custom_' prefix & converting numerical strings to a float.
-        foreach ($rawConfig as $key => $value) {
-            if (str_starts_with($key, 'custom_')) {
-                $name = substr($key, 7);
-                if (is_numeric($value)) {
-                    $strippedConfig[$name] = floatval($value);
-                } else {
-                    $strippedConfig[$name] = $value;
-                }
-            }
+        if (!is_null($client) && $client->id !== $model->client_id) {
+            throw new \FOSSBilling\Exception('API key does not exist');
         }
 
-        $data = [
-            'valid' => $this->isActive($model),
-            'config' => $strippedConfig,
-        ];
+        $config = json_decode($model->config, true);
 
-        return $data;
+        //$model->domain_name = $this->generateKey($config);
+        $model->updated_at = date('Y-m-d H:i:s');
+        $this->di['db']->store($model);
+
+        return true;
     }
-
+    
     /**
-     * Used to reset an API key using the API key generator.
+     * Used to delete a DNS record for a specified domain.
      *
-     * @param array $data An array containing what API key to reset. At least one of the possible identification methods must be provided.
-     *                    - int 'order_id' (optional) The ID of the API key to rest.
-     *                    - string 'key' (optional) The API key to reset.
+     * @param array $data An array containing the identification information of the DNS record to be deleted.
+     *                    One or more of the following parameters must be provided:
+     *                    - int 'record_id' (optional) The unique ID of the DNS record to delete.
+     *                    - string 'domain_name' (optional) The domain name associated with the DNS record to delete.
+     *                    - string 'record_type' (optional) The type of the DNS record (e.g., A, MX, CNAME) to delete.
+     *                    - string 'host' (optional) The host name for the DNS record to delete.
+     *
+     * @return bool Returns true if the DNS record was successfully deleted, false otherwise.
      */
-    public function resetDomain(array $data): bool
+    public function delRecord(array $data): bool
     {
+        throw new \FOSSBilling\Exception('Domain does not exist');
+        
+        
         if (empty($data['domain']) && empty($data['order_id'])) {
             throw new \FOSSBilling\Exception('You must provide either the API key or API key order ID in order to reset it.');
         } elseif (!empty($data['order_id'])) {
@@ -249,7 +243,7 @@ class Service implements InjectionAwareInterface
     }
 
     /**
-     * Creates the database structure to store the API keys in.
+     * Creates the database structure to store the DNS records in.
      */
     public function install(): bool
     {
@@ -275,7 +269,7 @@ class Service implements InjectionAwareInterface
             `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
             `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`),
-            FOREIGN KEY (`domain_id`) REFERENCES `service_domain`(`id`) ON DELETE CASCADE
+            FOREIGN KEY (`domain_id`) REFERENCES `service_dns`(`id`) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
         CREATE TABLE IF NOT EXISTS `service_dns_providers` (
             `id` bigint(20) NOT NULL AUTO_INCREMENT,
@@ -285,8 +279,7 @@ class Service implements InjectionAwareInterface
             `api_password` varchar(255) NOT NULL,
             `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
             `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`),
-            FOREIGN KEY (`domain_id`) REFERENCES `service_domain`(`id`) ON DELETE CASCADE
+            PRIMARY KEY (`id`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;';
         $this->di['db']->exec($sql);
 
@@ -294,7 +287,7 @@ class Service implements InjectionAwareInterface
     }
 
     /**
-     * Removes the API keys from the database.
+     * Removes the DNS records from the database.
      */
     public function uninstall(): bool
     {
@@ -305,73 +298,11 @@ class Service implements InjectionAwareInterface
         return true;
     }
 
-    /**
-     * Generates a new API using PHP's built-in cryptographically secure random_bytes to ensure the API keys are truly random and not predictable.
-     *
-     * @param array $config (optional) An array of configuration options. All configuration keys are optional.
-     *                      - int 'length' How long of an API key to generate.
-     *                      - bool 'split' True to enable splitting of the API key using dashes. Does not count towards the total key length.
-     *                      - int 'split_interval' How often the API key should be split with dashes. Example: 8 for every 8 characters.
-     *                      - string 'case' What capitalization should be used for the generated API key. 'lower', 'upper', or 'mixed'.
-     */
-    private function generateKey(array $config = []): string
-    {
-        $length = $config['length'] ?? 32;
-        $split = $config['split'] ?? true;
-        $splitLength = $config['split_interval'] ?? 8;
-        $case = $config['case'] ?? 'upper';
-
-        $i = 0;
-        do {
-            // Try 10 times to generate a unique API key. Fail if we are unable to.
-            if ($i++ >= 10) {
-                throw new \FOSSBilling\Exception('Maximum number of iterations reached while generating API key');
-            }
-
-            // Generate random bytes half the length of the configured length, as the length will doubled when converted to a hex string.
-            $randomBytes = random_bytes(ceil($length / 2));
-            $domain = substr(bin2hex($randomBytes), 0, $length);
-
-            if ($split) {
-                $domain = chunk_split($domain, $splitLength, '-');
-                $domain = rtrim($domain, '-');
-            }
-
-            switch ($case) {
-                case 'lower':
-                    // Do nothing, the API key generated will be lowercase by default.
-                    break;
-                case 'upper':
-                    $domain = strtoupper($domain);
-
-                    break;
-                case 'mixed':
-                    $characters = str_split($domain);
-                    $result = '';
-
-                    foreach ($characters as $character) {
-                        if (random_int(0, 1) <= 0.5) {
-                            $character = strtoupper($character);
-                        }
-
-                        $result .= $character;
-                    }
-                    $domain = $result;
-
-                    break;
-                default:
-                    throw new \FOSSBilling\Exception("Unknown uppercase option ':case:'. API generator only accepts 'lower', 'upper', or 'mixed'.", [':case:' => $case]);
-            }
-        } while ($this->di['db']->findOne('service_dns', 'domain_name = :domain_name', [':domain_name' => $domain]) !== null);
-
-        return $domain;
-    }
-
     private function isActive(OODBBean $model): bool
     {
         $order = $this->di['db']->findOne('ClientOrder', 'service_id = :id AND service_type = "dns"', [':id' => $model->id]);
         if (is_null($order)) {
-            throw new \FOSSBilling\Exception('API key does not exist');
+            throw new \FOSSBilling\Exception('DNS record does not exist');
         }
 
         return $order->status === 'active';
