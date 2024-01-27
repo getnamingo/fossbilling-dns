@@ -28,12 +28,9 @@ class Service implements InjectionAwareInterface
         return $this->di;
     }
     
-    // Method to dynamically choose and set the DNS provider
-    private function chooseDnsProvider() {
-        // Example logic to choose the provider
-        // This could be based on configuration, user input, etc.
-        $providerName = 'Desec'; // This is just an example
-        $apiToken = ''; // This is just an example
+    private function chooseDnsProvider($config) {
+        $providerName = $config['provider'];
+        $apiToken = $config['apikey'];
 
         switch ($providerName) {
             case 'Desec':
@@ -79,7 +76,7 @@ class Service implements InjectionAwareInterface
         $model->updated_at = date('Y-m-d H:i:s');
         $this->di['db']->store($model);
         
-        $this->chooseDnsProvider();
+        $this->chooseDnsProvider($config);
         if ($this->dnsProvider === null) {
             throw new \FOSSBilling\Exception("DNS provider is not set.");
         }
@@ -148,14 +145,7 @@ class Service implements InjectionAwareInterface
      * @return bool Returns true on successful addition of the DNS record, false otherwise.
      */
     public function addRecord(array $data): bool
-    {
-        $this->chooseDnsProvider();
-
-        // Check if DNS provider is set
-        if ($this->dnsProvider === null) {
-            throw new \FOSSBilling\Exception("DNS provider is not set.");
-        }
-              
+    {            
         if (!empty($data['order_id'])) {
             $order = $this->di['db']->getExistingModelById('ClientOrder', $data['order_id'], 'Order not found');
             $orderService = $this->di['mod_service']('order');
@@ -183,6 +173,13 @@ class Service implements InjectionAwareInterface
             'ttl' => (int) $data['record_ttl'],
             'records' => [$data['record_value']]
         ];
+
+        $this->chooseDnsProvider($config);
+
+        // Check if DNS provider is set
+        if ($this->dnsProvider === null) {
+            throw new \FOSSBilling\Exception("DNS provider is not set.");
+        }
 
         $this->dnsProvider->createRRset($config['domain_name'], $rrsetData);
         $model->updated_at = date('Y-m-d H:i:s');
