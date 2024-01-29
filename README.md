@@ -17,6 +17,8 @@ Start by downloading the latest version of FOSSBilling from the official website
 
 First, download this repository. After successfully downloading the repository, move the `Servicedns` directory into the `[FOSSBilling]/modules` directory.
 
+Go to `[FOSSBilling]/modules/Servicedns/Providers` directory and run the `composer install` command.
+
 ### 3. Addition of Synchronization Scripts:
 
 **not yet implemented**
