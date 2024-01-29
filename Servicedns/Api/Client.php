@@ -21,6 +21,16 @@ class Client extends \Api_Abstract
     {
         return $this->getService()->addRecord($data);
     }
+    
+    /**
+     * Used to update a DNS record for a specified domain.
+     *
+     * @param array $data An array containing the necessary information for updating a DNS record.
+     */
+    public function update($data): bool
+    {
+        return $this->getService()->updateRecord($data);
+    }
 
     /**
      * Used to delete a DNS record for a specified domain.

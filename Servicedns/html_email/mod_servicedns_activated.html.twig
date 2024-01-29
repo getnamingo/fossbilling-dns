@@ -39,7 +39,7 @@
 	<p>Hello {{ c.first_name }} {{ c.last_name }},</p>
 	<p>Your <strong>{{ order.title }}</strong> is now activated.</p>
 
-    <p><strong>API key:</strong> {{ service.api_key }}</p>
+    <p><strong>Domain name:</strong> {{ service.domain_name }}</p>
 
     <p>You may <a href="{{'login'|link({'email' : c.email }) }}" target="_blank">login</a> or <a href="{{ 'order/service/manage'|link }}/{{ order.id }}" target="_blank">manage your order.</a>
 
