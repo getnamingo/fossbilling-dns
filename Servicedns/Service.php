@@ -180,7 +180,16 @@ class Service implements InjectionAwareInterface
             'ttl' => (int) $data['record_ttl'],
             'records' => [$data['record_value']]
         ];
-
+        
+        // Check if the record type is MX
+        if ($data['record_type'] === 'MX') {
+            if ($config['provider'] === 'Desec') {
+                $rrsetData['records'] = [$data['record_priority'] . ' ' . $data['record_value']];
+            } else {
+                $rrsetData['priority'] = $data['record_priority'];
+            }
+        }
+        
         $this->chooseDnsProvider($config);
 
         // Check if DNS provider is set
@@ -200,7 +209,7 @@ class Service implements InjectionAwareInterface
         $records->host = $data['record_name'];
         $records->value = $data['record_value'];
         $records->ttl = (int) $data['record_ttl'];
-        $records->priority = 0;
+        $records->priority = (isset($data['record_priority']) && $data['record_priority'] !== '') ? $data['record_priority'] : 0;
         $records->created_at = date('Y-m-d H:i:s');
         $records->updated_at = date('Y-m-d H:i:s');
         $this->di['db']->store($records);
@@ -242,6 +251,15 @@ class Service implements InjectionAwareInterface
             'ttl' => (int) $data['record_ttl'],
             'records' => [$data['record_value']]
         ];
+		
+        // Check if the record type is MX
+        if ($data['record_type'] === 'MX') {
+            if ($config['provider'] === 'Desec') {
+                $rrsetData['records'] = [$data['record_priority'] . ' ' . $data['record_value']];
+            } else {
+                $rrsetData['priority'] = $data['record_priority'];
+            }
+        }
 
         $this->chooseDnsProvider($config);
 
@@ -297,7 +315,7 @@ class Service implements InjectionAwareInterface
             throw new \FOSSBilling\Exception("DNS provider is not set.");
         }
 
-        $this->dnsProvider->deleteRRset($config['domain_name'], $data['record_name'], $data['record_type']);
+        $this->dnsProvider->deleteRRset($config['domain_name'], $data['record_name'], $data['record_type'], $data['record_value']);
         $model->updated_at = date('Y-m-d H:i:s');
         $this->di['db']->store($model);
 

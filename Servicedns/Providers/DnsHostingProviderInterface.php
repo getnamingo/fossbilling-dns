@@ -17,6 +17,6 @@ interface DnsHostingProviderInterface {
     public function retrieveSpecificRRset($domain, $subname, $type);
     public function modifyRRset($domain, $subname, $type, $rrsetData);
     public function modifyBulkRRsets($domain, $rrsetDataArray);
-    public function deleteRRset($domain, $subname, $type);
+    public function deleteRRset($domain, $subname, $type, $value);
     public function deleteBulkRRsets($domain, $rrsetDataArray);
 }

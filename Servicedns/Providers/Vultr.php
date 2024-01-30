@@ -75,7 +75,11 @@ class Vultr implements DnsHostingProviderInterface {
             if (isset($rrsetData['records'])) {
                 $record->setData($rrsetData['records'][0]);
             }
-            $record->setPriority(0);
+            if (isset($rrsetData['priority'])) {
+                $record->setPriority($rrsetData['priority']);
+            } else {
+                $record->setPriority(0);
+            }
             if (isset($rrsetData['ttl'])) {
                 $record->setTtl($rrsetData['ttl']);
             }
@@ -104,9 +108,18 @@ class Vultr implements DnsHostingProviderInterface {
             $records = $this->client->dns->getRecords($domainName);
             foreach ($records as $record) {
                 if ($record instanceof \Vultr\VultrPhp\Services\DNS\Record) {
-                    if ($record->getName() === $subname && $record->getType() === $type) {
-                        $recordId = $record->getId();
-                        break; // Stop the loop once the record is found
+                    if ($type === 'MX') {
+                        // For MX records, compare type, and data
+                        if ($record->getType() === $type && $record->getData() === $rrsetData['records'][0]) {
+                            $recordId = $record->getId();
+                            break; // Stop the loop once the record is found
+                        }
+                    } else {
+                        // For non-MX records, compare only name and type
+                        if ($record->getName() === $subname && $record->getType() === $type) {
+                            $recordId = $record->getId();
+                            break; // Stop the loop once the record is found
+                        }
                     }
                 }
             }
@@ -147,14 +160,23 @@ class Vultr implements DnsHostingProviderInterface {
         throw new \FOSSBilling\Exception("Not yet implemented");
     }
 
-    public function deleteRRset($domainName, $subname, $type) {
+    public function deleteRRset($domainName, $subname, $type, $value) {
         try {
             $records = $this->client->dns->getRecords($domainName);
             foreach ($records as $record) {
                 if ($record instanceof \Vultr\VultrPhp\Services\DNS\Record) {
-                    if ($record->getName() === $subname && $record->getType() === $type) {
-                        $recordId = $record->getId();
-                        break; // Stop the loop once the record is found
+                    if ($type === 'MX') {
+                        // For MX records, compare type, and data
+                        if ($record->getType() === $type && $record->getData() === $value) {
+                            $recordId = $record->getId();
+                            break; // Stop the loop once the record is found
+                        }
+                    } else {
+                        // For non-MX records, compare only name and type
+                        if ($record->getName() === $subname && $record->getType() === $type) {
+                            $recordId = $record->getId();
+                            break; // Stop the loop once the record is found
+                        }
                     }
                 }
             }

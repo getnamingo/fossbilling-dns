@@ -4,11 +4,11 @@
 <div class="card mb-4">
     <div class="card-body overflow-auto">
         <h3>{{ 'DNS Record Management'|trans }}</h3>
-
+        
         <form class="mb-4 api-form" method="post" action="{{ 'api/client/servicedns/add'|link }}" data-api-msg="{{ 'New record added'|trans }}">
           <input type="hidden" name="CSRFToken" value="{{ CSRFToken }}"/>
             <div class="row g-3">
-                <div class="col-md">
+                <div class="col-md-2">
                     <select class="form-select" name="record_type" required>
                         <option value="" disabled selected>Select Type</option>
                         <option value="A">A</option>
@@ -20,18 +20,21 @@
                         <option value="DS">DS</option>
                     </select>
                 </div>
-                <div class="col-md">
+                <div class="col-md-2">
                     <input type="text" class="form-control" placeholder="example." name="record_name" required>
                 </div>
-                <div class="col-md">
+                <div class="col-md-3">
                     <input type="text" class="form-control" placeholder="127.0.0.1" name="record_value" required>
                 </div>
-                <div class="col-md-2">
+                <div class="col-sm">
                     <input type="number" class="form-control" placeholder="TTL" name="record_ttl" value="600" required>
+                </div>
+                <div class="col-sm">
+                    <input type="number" class="form-control" placeholder="Priority" name="record_priority">
                 </div>
                 <div class="col-md-auto">
                     <input type="hidden" name="order_id" value="{{ order.id }}">
-                    <button class="btn btn-primary" type="submit" value="{{ 'Add Record'|trans }}">{{ 'Add Record'|trans }}</button>
+                    <button class="btn btn-outline-primary btn-icon" type="submit" title="{{ 'Add Record'|trans }}"><svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg></button>
                 </div>
             </div>
         </form>
@@ -43,6 +46,7 @@
                     <th scope="col">Name</th>
                     <th scope="col">Value</th>
                     <th scope="col">TTL</th>
+                    <th scope="col">Priority</th>
                     <th scope="col">Actions</th>
                 </tr>
             </thead>
@@ -59,14 +63,12 @@
                             <td>{{ record.host }}</td>
                             <td><input type="text" class="form-control" placeholder="127.0.0.1" name="record_value" value="{{ record.value }}" required></td>
                             <td><input type="text" class="form-control" placeholder="600" name="record_ttl" value="{{ record.ttl }}" required></td>
+                            <td>{% if record.type == 'MX' %}{{ record.priority }}{% endif %}</td>
                             <td>
-                                <!-- Update Button -->
-                                <button type="submit" class="btn btn-primary btn-icon" name="action" value="update" title="Update Record">
+                                <button type="submit" class="btn btn-outline-primary btn-icon" name="action" value="update" title="Update Record">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" /><path d="M16 5l3 3" /></svg>
                                 </button>
-
-                                <!-- Delete Button -->
-                                <button type="button" class="btn btn-danger btn-icon" title="Delete Record" onclick="confirmDelete(this.form)">
+                                <button type="button" class="btn btn-outline-danger btn-icon" title="Delete Record" onclick="confirmDelete(this.form)">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M10 10l4 4m0 -4l-4 4" /></svg>
                                 </button>
                             </td>
@@ -74,7 +76,7 @@
                     </form>
                     {% else %}
                         <tr>
-                            <td colspan="5">No DNS records found.</td>
+                            <td colspan="6">No DNS records found.</td>
                         </tr>
                     {% endfor %}
                 </tbody>
