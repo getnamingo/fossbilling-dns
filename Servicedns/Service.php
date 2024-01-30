@@ -36,6 +36,9 @@ class Service implements InjectionAwareInterface
             case 'Desec':
                 $this->dnsProvider = new Providers\Desec($apiToken);
                 break;
+            case 'Vultr':
+                $this->dnsProvider = new Providers\Vultr($apiToken);
+                break;
             // Add more cases for additional providers
             default:
                 throw new \FOSSBilling\Exception("Unknown DNS provider: {$providerName}");

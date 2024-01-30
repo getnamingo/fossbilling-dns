@@ -57,6 +57,10 @@ class Desec implements DnsHostingProviderInterface {
     }
 
     public function deleteDomain($domainName) {
+        if (empty($domainName)) {
+            throw new \FOSSBilling\Exception("Domain name cannot be empty");
+        }
+
         $response = $this->client->request('DELETE', $domainName . "/", ['headers' => $this->headers]);
         return $response->getStatusCode() === 204;
     }

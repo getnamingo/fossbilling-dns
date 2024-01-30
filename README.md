@@ -7,6 +7,8 @@ This module is designed for use with the following DNS providers:
 
 - [deSEC](https://desec.io/)
 
+- [Vultr](https://www.vultr.com/)
+
 ## FOSSBilling Module Installation instructions
 
 ### 1. Download and Install FOSSBilling:
