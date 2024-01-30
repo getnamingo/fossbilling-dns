@@ -8,9 +8,9 @@
                 <label class="form-label col-3 col-form-label">{{ 'Provider'|trans }}:</label>
                 <div class="col">
                     <select class="form-select" name="config[provider]" required>
-                        <option value="" disabled selected>Select Provider</option>
-                        <option value="Desec">Desec</option>
-                        <option value="Vultr">Vultr</option>
+                        <option value="" disabled {% if not product.config.provider %}selected{% endif %}>Select Provider</option>
+                        <option value="Desec" {% if product.config.provider == 'Desec' %}selected{% endif %}>Desec</option>
+                        <option value="Vultr" {% if product.config.provider == 'Vultr' %}selected{% endif %}>Vultr</option>
                     </select>
                 </div>
             </div>
