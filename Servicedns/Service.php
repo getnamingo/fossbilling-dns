@@ -39,6 +39,9 @@ class Service implements InjectionAwareInterface
             case 'Vultr':
                 $this->dnsProvider = new Providers\Vultr($apiToken);
                 break;
+            case 'Bind':
+                $this->dnsProvider = new Providers\Bind();
+                break;
             // Add more cases for additional providers
             default:
                 throw new \FOSSBilling\Exception("Unknown DNS provider: {$providerName}");

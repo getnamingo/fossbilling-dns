@@ -11,6 +11,7 @@
                         <option value="" disabled {% if not product.config.provider %}selected{% endif %}>Select Provider</option>
                         <option value="Desec" {% if product.config.provider == 'Desec' %}selected{% endif %}>Desec</option>
                         <option value="Vultr" {% if product.config.provider == 'Vultr' %}selected{% endif %}>Vultr</option>
+                        <option value="Bind" {% if product.config.provider == 'Bind' %}selected{% endif %}>Bind</option>
                     </select>
                 </div>
             </div>

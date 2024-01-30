@@ -1,7 +1,8 @@
 {
     "require": {
         "guzzlehttp/guzzle": "^7.8",
-        "vultr/vultr-php": "^1.0"
+        "vultr/vultr-php": "^1.0",
+        "badcow/dns": "^4.2"
     },
     "config": {
         "allow-plugins": {

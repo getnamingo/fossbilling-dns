@@ -9,6 +9,8 @@ This module is designed for use with the following DNS providers:
 
 - [Vultr](https://www.vultr.com/)
 
+- [BIND](https://www.isc.org/bind/)
+
 ## FOSSBilling Module Installation instructions
 
 ### 1. Download and Install FOSSBilling:
@@ -21,13 +23,19 @@ First, download this repository. After successfully downloading the repository, 
 
 Go to `[FOSSBilling]/modules/Servicedns/Providers` directory and run the `composer install` command.
 
-### 3. Addition of Synchronization Scripts:
+### (BIND Module only) 3. Addition of Synchronization Scripts:
 
-**not yet implemented**
+The BIND provider has an additional synchronization script which can be found at `[FOSSBilling]/modules/Servicedns/Crons/Bind.php`. It needs to be configured with your BIND installation parameters, so it can generate the zones regularly.
 
-### 4. Setting Up the Cron Job:
+### (BIND Module only) 4. Setting Up the Cron Job:
 
-**not yet implemented**
+You need to set up a hourly cron job that runs the sync module. Open crontab using the command `crontab -e` in your terminal.
+
+Add the following cron job:
+
+`0 * * * * php [FOSSBilling]/modules/Servicedns/Crons/Bind.php`
+
+This command schedules the synchronization script to run hourly.
 
 ### 5. Activate the DNS hosting module:
 
