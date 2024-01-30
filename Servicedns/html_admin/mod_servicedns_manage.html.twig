@@ -39,48 +39,60 @@
             </div>
         </form>
 
-        <table class="table table-striped table-bordered">
-            <thead>
-                <tr>
-                    <th scope="col">Type</th>
-                    <th scope="col">Name</th>
-                    <th scope="col">Value</th>
-                    <th scope="col">TTL</th>
-                    <th scope="col">Priority</th>
-                    <th scope="col">Actions</th>
-                </tr>
-            </thead>
-                <tbody id="recordsTableBody">
-                    {% for record in service.records %}
-                    <form class="mb-4 api-form" method="post" action="{{ 'api/client/servicedns/update'|link }}" data-api-msg="{{ 'Record updated'|trans }}">
-                    <input type="hidden" name="CSRFToken" value="{{ CSRFToken }}"/>
-                    <input type="hidden" name="record_id" value="{{ record.id }}"/>
-                    <input type="hidden" name="record_type" value="{{ record.type }}"/>
-                    <input type="hidden" name="record_name" value="{{ record.host }}"/>
-                    <input type="hidden" name="order_id" value="{{ order.id }}">
-                        <tr>
-                            <td>{{ record.type }}</td>
-                            <td>{{ record.host }}</td>
-                            <td><input type="text" class="form-control" placeholder="127.0.0.1" name="record_value" value="{{ record.value }}" required></td>
-                            <td><input type="text" class="form-control" placeholder="600" name="record_ttl" value="{{ record.ttl }}" required></td>
-                            <td>{% if record.type == 'MX' %}{{ record.priority }}{% endif %}</td>
-                            <td>
-                                <button type="submit" class="btn btn-outline-primary btn-icon" name="action" value="update" title="Update Record">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" /><path d="M16 5l3 3" /></svg>
-                                </button>
-                                <button type="button" class="btn btn-outline-danger btn-icon" title="Delete Record" onclick="confirmDelete(this.form)">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M10 10l4 4m0 -4l-4 4" /></svg>
-                                </button>
-                            </td>
-                        </tr>
-                    </form>
-                    {% else %}
-                        <tr>
-                            <td colspan="6">No DNS records found.</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered text-nowrap table-vcenter">
+                <thead>
+                    <tr>
+                        <th scope="col" class="w-1">Type</th>
+                        <th scope="col" class="w-25">Name</th>
+                        <th scope="col" class="w-50">Value</th>
+                        <th scope="col" class="w-25">TTL</th>
+                        <th scope="col" class="w-1">Priority</th>
+                        <th scope="col" class="w-1">Actions</th>
+                    </tr>
+                </thead>
+                    <tbody id="recordsTableBody">
+                        {% for record in service.records %}
+                        <form class="mb-4 api-form" method="post" action="{{ 'api/client/servicedns/update'|link }}" data-api-msg="{{ 'Record updated'|trans }}">
+                        <input type="hidden" name="CSRFToken" value="{{ CSRFToken }}"/>
+                        <input type="hidden" name="record_id" value="{{ record.id }}"/>
+                        <input type="hidden" name="record_type" value="{{ record.type }}"/>
+                        <input type="hidden" name="record_name" value="{{ record.host }}"/>
+                        <input type="hidden" name="order_id" value="{{ order.id }}">
+                            <tr>
+                                <td>{% set dns_type = record.type|upper %}
+                                <span class="badge 
+                                {% if dns_type == 'A' %}bg-blue-lt
+                                {% elseif dns_type == 'AAAA' %}bg-indigo-lt
+                                {% elseif dns_type == 'CNAME' %}bg-green-lt
+                                {% elseif dns_type == 'MX' %}bg-orange-lt
+                                {% elseif dns_type == 'TXT' %}bg-teal-lt
+                                {% elseif dns_type == 'SPF' %}bg-red-lt
+                                {% elseif dns_type == 'DS' %}bg-purple-lt
+                                {% else %}bg-default
+                                {% endif %}">{{ dns_type }}</span></td></td>
+                                <td><strong>{{ record.host }}</strong></td>
+                                <td><input type="text" class="form-control" placeholder="127.0.0.1" name="record_value" value="{{ record.value }}" style="min-width:200px;" required></td>
+                                <td><input type="text" class="form-control" placeholder="600" name="record_ttl" value="{{ record.ttl }}" style="min-width:100px;" required></td>
+                                <td>{% if record.type == 'MX' %}<span class="badge bg-dark-lt">{{ record.priority }}</span>{% endif %}</td>
+                                <td>
+                                    <button type="submit" class="btn btn-outline-primary btn-icon" name="action" value="update" title="Update Record">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" /><path d="M16 5l3 3" /></svg>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger btn-icon" title="Delete Record" onclick="confirmDelete(this.form)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M10 10l4 4m0 -4l-4 4" /></svg>
+                                    </button>
+                                </td>
+                            </tr>
+                        </form>
+                        {% else %}
+                            <tr>
+                                <td colspan="6">No DNS records found.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+            </table>
+        </div>
     </div>
     <div class="card-footer text-center">
         {{ order_actions }}
