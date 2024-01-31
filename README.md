@@ -3,7 +3,7 @@ DNS hosting module for FOSSBilling
 
 ## Compatibility
 
-This module is designed for use with the following DNS providers:
+This module is designed for use with the following DNS servers/providers:
 
 - [BIND](https://www.isc.org/bind/)
 
