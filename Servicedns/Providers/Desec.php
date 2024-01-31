@@ -10,7 +10,8 @@ class Desec implements DnsHostingProviderInterface {
     private $client;
     private $headers;
 
-    public function __construct($token) {
+    public function __construct($config) {
+        $token = $config['apikey'];
         if (empty($token)) {
             throw new \FOSSBilling\Exception("API token cannot be empty");
         }

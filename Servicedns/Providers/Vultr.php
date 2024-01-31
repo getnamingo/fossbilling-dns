@@ -12,7 +12,8 @@ use Vultr\VultrPhp\VultrClient;
 class Vultr implements DnsHostingProviderInterface {
     private $client;
     
-    public function __construct($token) {
+    public function __construct($config) {
+        $token = $config['apikey'];
         if (empty($token)) {
             throw new \FOSSBilling\Exception("API token cannot be empty");
         }

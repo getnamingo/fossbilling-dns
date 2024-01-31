@@ -4,22 +4,71 @@
         <form method="post" action="{{ 'api/admin/product/update_config'|link }}" class="api-form save" data-api-msg="{{ 'DNS Provider settings updated'|trans }}">
             <input type="hidden" name="CSRFToken" value="{{ CSRFToken }}"/>
             <div class="mb-3 row">
-                <P>{{ 'Select your DNS provider from the list. Ensure you have an account with the chosen service.'|trans }}</p>
+                <p>{{ 'Select your DNS provider from the list. Ensure you have an account with the chosen service.'|trans }}</p>
                 <label class="form-label col-3 col-form-label">{{ 'Provider'|trans }}:</label>
                 <div class="col">
                     <select class="form-select" name="config[provider]" required>
                         <option value="" disabled {% if not product.config.provider %}selected{% endif %}>Select Provider</option>
-                        <option value="Desec" {% if product.config.provider == 'Desec' %}selected{% endif %}>Desec</option>
-                        <option value="Vultr" {% if product.config.provider == 'Vultr' %}selected{% endif %}>Vultr</option>
                         <option value="Bind" {% if product.config.provider == 'Bind' %}selected{% endif %}>Bind</option>
+                        <option value="Desec" {% if product.config.provider == 'Desec' %}selected{% endif %}>Desec</option>
+                        <option value="PowerDNS" {% if product.config.provider == 'PowerDNS' %}selected{% endif %}>PowerDNS</option>
+                        <option value="Vultr" {% if product.config.provider == 'Vultr' %}selected{% endif %}>Vultr</option>
                     </select>
                 </div>
             </div>
             <div class="mb-3 row">
-                <P>{{ 'Enter your DNS provider\'s API key. Keep it confidential and ensure it\'s valid for requests.'|trans }}</p>
+                <p>{{ 'Enter your DNS provider\'s API key. Keep it confidential and ensure it\'s valid for requests.'|trans }}</p>
                 <label class="form-label col-3 col-form-label">{{ 'API Key'|trans }}:</label>
                 <div class="col">
                     <input type="text" class="form-control" name="config[apikey]" value="{{ product.config.apikey }}">
+                </div>
+            </div>
+            <div class="hr-text">
+              <span>BIND and PowerDNS Additional Settings</span>
+            </div>
+            <div class="mb-3 row">
+                <p>{{ 'Specify the email address for the responsible person of this DNS zone. This address is used in the SOA (Start of Authority) record.'|trans }}</p>
+                <label class="form-label col-3 col-form-label">{{ 'SOA Email'|trans }}:</label>
+                <div class="col">
+                    <input type="text" class="form-control" name="config[soaemail]" placeholder="test@example.com" value="{{ product.config.soaemail }}">
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <p>{{ 'Enter the IP address of your PowerDNS server where the API is accessible.'|trans }}</p>
+                <label class="form-label col-3 col-form-label">{{ 'PowerDNS API IP'|trans }}:</label>
+                <div class="col">
+                    <input type="text" class="form-control" name="config[powerdnsapi]" placeholder="127.0.0.1" value="{{ product.config.powerdnsapi }}">
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <p>{{ 'Enter the nameservers for your DNS zone.'|trans }}</p>
+                <label class="form-label col-3 col-form-label">{{ 'NS1'|trans }}:</label>
+                <div class="col">
+                    <input type="text" class="form-control" name="config[ns1]" placeholder="ns1.example.com" value="{{ product.config.ns1 }}">
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="form-label col-3 col-form-label">{{ 'NS2'|trans }}:</label>
+                <div class="col">
+                    <input type="text" class="form-control" name="config[ns2]" placeholder="ns2.example.com" value="{{ product.config.ns2 }}">
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="form-label col-3 col-form-label">{{ 'NS3'|trans }}:</label>
+                <div class="col">
+                    <input type="text" class="form-control" name="config[ns3]" placeholder="ns3.example.com" value="{{ product.config.ns3 }}">
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="form-label col-3 col-form-label">{{ 'NS4'|trans }}:</label>
+                <div class="col">
+                    <input type="text" class="form-control" name="config[ns4]" placeholder="ns4.example.com" value="{{ product.config.ns4 }}">
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="form-label col-3 col-form-label">{{ 'NS5'|trans }}:</label>
+                <div class="col">
+                    <input type="text" class="form-control" name="config[ns5]" placeholder="ns5.example.com" value="{{ product.config.ns5 }}">
                 </div>
             </div>
             

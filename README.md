@@ -5,11 +5,13 @@ DNS hosting module for FOSSBilling
 
 This module is designed for use with the following DNS providers:
 
+- [BIND](https://www.isc.org/bind/)
+
 - [deSEC](https://desec.io/)
 
-- [Vultr](https://www.vultr.com/)
+- [PowerDNS](https://www.powerdns.com/)
 
-- [BIND](https://www.isc.org/bind/)
+- [Vultr](https://www.vultr.com/)
 
 ## FOSSBilling Module Installation instructions
 

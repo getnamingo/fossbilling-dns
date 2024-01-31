@@ -30,19 +30,20 @@ class Service implements InjectionAwareInterface
     
     private function chooseDnsProvider($config) {
         $providerName = $config['provider'];
-        $apiToken = $config['apikey'];
 
         switch ($providerName) {
-            case 'Desec':
-                $this->dnsProvider = new Providers\Desec($apiToken);
-                break;
-            case 'Vultr':
-                $this->dnsProvider = new Providers\Vultr($apiToken);
-                break;
             case 'Bind':
                 $this->dnsProvider = new Providers\Bind();
                 break;
-            // Add more cases for additional providers
+            case 'Desec':
+                $this->dnsProvider = new Providers\Desec($config);
+                break;
+            case 'PowerDNS':
+                $this->dnsProvider = new Providers\PowerDNS($config);
+                break;
+            case 'Vultr':
+                $this->dnsProvider = new Providers\Vultr($config);
+                break;
             default:
                 throw new \FOSSBilling\Exception("Unknown DNS provider: {$providerName}");
         }
@@ -254,7 +255,7 @@ class Service implements InjectionAwareInterface
             'ttl' => (int) $data['record_ttl'],
             'records' => [$data['record_value']]
         ];
-		
+        
         // Check if the record type is MX
         if ($data['record_type'] === 'MX') {
             if ($config['provider'] === 'Desec') {
