@@ -2,7 +2,7 @@
 
 namespace Box\Mod\Servicedns\Providers;
 
-use Exonet\Powerdns\Powerdns;
+use Exonet\Powerdns\Powerdns as PowerdnsApi;
 use Exonet\Powerdns\RecordType;
 use Exonet\Powerdns\Resources\ResourceRecord;
 use Exonet\Powerdns\Resources\Record;
@@ -29,7 +29,7 @@ class PowerDNS implements DnsHostingProviderInterface {
             'ns5' => $config['ns5'] ?? null,
         ];
 
-        $this->client = new Powerdns($api_ip, $token);
+        $this->client = new PowerdnsApi($api_ip, $token);
     }
 
     public function createDomain($domainName) {
