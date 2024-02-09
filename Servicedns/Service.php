@@ -121,17 +121,45 @@ class Service implements InjectionAwareInterface
 
     public function delete(?OODBBean $order, ?OODBBean $model): void
     {
-        $this->chooseDnsProvider();
-        if ($this->dnsProvider === null) {
-            throw new \FOSSBilling\Exception("DNS provider is not set.");
-        }
+    if ($order === null) {
+        throw new \FOSSBilling\Exception("Order is not provided.");
+    }
 
+    $config = json_decode($order->config, true);
+    if (!$config) {
+        throw new \FOSSBilling\Exception("Invalid or missing DNS provider configuration.");
+    }
+
+    $this->chooseDnsProvider($config);
+    if ($this->dnsProvider === null) {
+        throw new \FOSSBilling\Exception("DNS provider is not set.");
+    }
+
+    $domainName = $config['domain_name'] ?? null;
+    if (empty($domainName)) {
+        throw new \FOSSBilling\Exception("Domain name is not set.");
+    }
+
+    try {
+        // Attempt to delete the domain from PowerDNS.
         $this->dnsProvider->deleteDomain($domainName);
-
-        if (is_object($model)) {
-            $this->di['db']->trash($model);
+    } catch (\Exception $e) {
+        // Check if the exception is due to the domain not being found.
+        if (strpos($e->getMessage(), 'Not Found') !== false) {
+            // Log the not found error but proceed with deleting the order.
+            error_log("Domain $domainName not found in PowerDNS, but proceeding with order deletion.");
+        } else {
+            // For other exceptions, rethrow them as they indicate actual issues.
+            throw new \FOSSBilling\Exception("Failed to delete domain $domainName: " . $e->getMessage());
         }
     }
+
+    // Proceed with deleting the order from the database.
+    if (is_object($model)) {
+        $this->di['db']->trash($model);
+    }
+}
+
 
     public function toApiArray(OODBBean $model): array
     {
