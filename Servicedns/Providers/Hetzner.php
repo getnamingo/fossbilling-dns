@@ -114,7 +114,7 @@ class Hetzner implements DnsHostingProviderInterface {
             $response = $this->client->request('POST', 'records', [
                 'headers' => $this->headers,
                 'json' => [
-                    'value' => $rrsetData['record_value'][0],
+                    'value' => $rrsetData['records'][0],
                     'ttl' => $rrsetData['ttl'],
                     'type' => $rrsetData['type'],
                     'name' => $rrsetData['subname'],
@@ -191,7 +191,7 @@ class Hetzner implements DnsHostingProviderInterface {
             $response = $this->client->request('PUT', "records/{$recordId}", [
                 'headers' => $this->headers,
                 'json' => [
-                    'value' => $rrsetData['record_value'][0],
+                    'value' => $rrsetData['records'][0],
                     'ttl' => $rrsetData['ttl'],
                     'type' => $type,
                     'name' => $subname,
