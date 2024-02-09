@@ -122,7 +122,7 @@ class Hetzner implements DnsHostingProviderInterface {
                 ]
             ]);
 
-            if ($response->getStatusCode() === 201) {
+            if ($response->getStatusCode() === 200) {
                 $body = json_decode($response->getBody()->getContents(), true);
                 $recordId = $body['record']['id'] ?? null;
                 
@@ -135,12 +135,16 @@ class Hetzner implements DnsHostingProviderInterface {
                     'recordName' => $rrsetData['subname'],
                 ];
 
+                $update = ['dnsRecords' => $result['dnsRecords'] ?? []];
+                $key = array_search($recordId, array_column($update['dnsRecords'], 'recordId'));
+
                 if ($key !== false) {
-                    $result['dnsRecords'][$key] = $dnsRecord;
+                    $update['dnsRecords'][$key] = $dnsRecord;
                 } else {
-                    $result['dnsRecords'][] = $dnsRecord;
+                    $update['dnsRecords'][] = $dnsRecord;
                 }
-                $this->store->updateById($result['_id'], $result);
+
+                $this->store->updateById($result['_id'], ['dnsRecords' => $update['dnsRecords']]);
                 return true;
             } else {
                 return false;
