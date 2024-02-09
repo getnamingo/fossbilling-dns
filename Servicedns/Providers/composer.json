@@ -3,7 +3,8 @@
         "guzzlehttp/guzzle": "^7.8",
         "vultr/vultr-php": "^1.0",
         "badcow/dns": "^4.2",
-        "exonet/powerdns-php": "^4.5"
+        "exonet/powerdns-php": "^4.5",
+        "rakibtg/sleekdb": "^2.15"
     },
     "config": {
         "allow-plugins": {
