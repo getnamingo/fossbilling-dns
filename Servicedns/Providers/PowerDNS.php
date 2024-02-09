@@ -21,6 +21,7 @@ class PowerDNS implements DnsHostingProviderInterface {
             $api_ip = '127.0.0.1';
         }
         
+        // Dynamically pull nameserver settings from the configuration
         $this->nsRecords = [
             'ns1' => $config['ns1'] ?? null,
             'ns2' => $config['ns2'] ?? null,
@@ -33,22 +34,28 @@ class PowerDNS implements DnsHostingProviderInterface {
     }
 
     public function createDomain($domainName) {
-        if (empty($domainName)) {
-            throw new \FOSSBilling\Exception("Domain name cannot be empty");
-        }
-        
-        $nsRecords = array_filter($this->nsRecords);
-        $formattedNsRecords = array_map(function($nsRecord) {
-            return rtrim($nsRecord, '.') . '.'; // Ensure each record ends with a period
-        }, $nsRecords);
-
-        $response = $this->client->createZone(
-            $domainName,
-            $formattedNsRecords
-        );
-
-        return json_decode($domainName, true);
+    if (empty($domainName)) {
+        throw new \FOSSBilling\Exception("Domain name cannot be empty");
     }
+
+    $nsRecords = array_filter($this->nsRecords);
+    $formattedNsRecords = array_values(array_map(function($nsRecord) {
+        return rtrim($nsRecord, '.') . '.';
+    }, $nsRecords));
+
+    try {
+        $this->client->createZone($domainName, $formattedNsRecords);
+        // On successful creation, simply return true.
+        return true;
+    } catch (\Exception $e) {
+        // Throw an exception to indicate failure, including for conflicts.
+        if (strpos($e->getMessage(), 'Conflict') !== false) {
+            throw new \FOSSBilling\Exception("Zone already exists for domain: " . $domainName);
+        } else {
+            throw new \FOSSBilling\Exception("Failed to create zone for domain: " . $domainName . ". Error: " . $e->getMessage());
+        }
+    }
+}
 
     public function listDomains() {
         throw new \FOSSBilling\Exception("Not yet implemented");
