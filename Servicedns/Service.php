@@ -38,6 +38,9 @@ class Service implements InjectionAwareInterface
             case 'Desec':
                 $this->dnsProvider = new Providers\Desec($config);
                 break;
+            case 'DNSimple':
+                $this->dnsProvider = new Providers\DNSimple($config);
+                break;
             case 'Hetzner':
                 $this->dnsProvider = new Providers\Hetzner($config);
                 break;

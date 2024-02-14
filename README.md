@@ -9,6 +9,8 @@ This module is designed for use with the following DNS servers/providers:
 
 - [deSEC](https://desec.io/)
 
+- [DNSimple](https://dnsimple.com/)
+
 - [Hetzner](https://www.hetzner.com/)
 
 - [PowerDNS](https://www.powerdns.com/)
