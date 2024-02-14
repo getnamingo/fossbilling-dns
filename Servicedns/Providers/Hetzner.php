@@ -4,15 +4,28 @@ namespace Box\Mod\Servicedns\Providers;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
-use SleekDB\Store;
+use PDO;
 
 class Hetzner implements DnsHostingProviderInterface {
     private $baseUrl = "https://dns.hetzner.com/api/v1/";
     private $client;
     private $headers;
-    private $store;
+    private $dbConfig;
+    private $pdo;
 
     public function __construct($config) {
+        // Load DB configuration
+        $dbc = include __DIR__ . '/../../../config.php';
+        $this->dbConfig = $dbc['db'];
+        
+        try {
+            $dsn = $this->dbConfig["type"] . ":host=" . $this->dbConfig["host"] . ";port=" . $this->dbConfig["port"] . ";dbname=" . $this->dbConfig["name"];
+            $this->pdo = new PDO($dsn, $this->dbConfig['user'], $this->dbConfig['password']);
+            $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        } catch (\PDOException $e) {
+            throw new \FOSSBilling\Exception("Connection failed: " . $e->getMessage());
+        }
+        
         $token = $config['apikey'];
         if (empty($token)) {
             throw new \FOSSBilling\Exception("API token cannot be empty");
@@ -23,9 +36,6 @@ class Hetzner implements DnsHostingProviderInterface {
             'Auth-API-Token' => $token,
             'Content-Type' => 'application/json',
         ];
-        
-        $dataDir = __DIR__ . '/../../../data/upload';
-        $this->store = new Store('hetzner.dns', $dataDir);
     }
 
     public function createDomain($domainName) {
@@ -41,16 +51,19 @@ class Hetzner implements DnsHostingProviderInterface {
             
             $body = json_decode($response->getBody()->getContents(), true);
             $zoneId = $body['zone']['id'] ?? null;
+            
+            try {
+                $sql = "UPDATE service_dns SET zoneId = :zoneId WHERE domain_name = :domainName";
+                $stmt = $this->pdo->prepare($sql);
+                $stmt->bindParam(':zoneId', $zoneId, PDO::PARAM_STR);
+                $stmt->bindParam(':domainName', $domainName, PDO::PARAM_STR);
+                $stmt->execute();
 
-            $existing = $this->store->findOneBy(["domainName", "=", $domainName]);
-            if (!empty($existing)) {
-                $this->store->updateBy(["domainName", "=", $domainName], ["zoneId" => $zoneId]);
-            } else {
-                $this->store->insert([
-                    'domainName' => $domainName,
-                    'zoneId' => $zoneId,
-                    "dnsRecords" => [],
-                ]);
+                if ($stmt->rowCount() === 0) {
+                    throw new \FOSSBilling\Exception("No DB update made. Check if the domain name exists.");
+                }
+            } catch (\PDOException $e) {
+                throw new \FOSSBilling\Exception("Error updating zoneId: " . $e->getMessage());
             }
             
             return json_decode($response->getBody(), true);
@@ -80,11 +93,22 @@ class Hetzner implements DnsHostingProviderInterface {
             throw new \FOSSBilling\Exception("Domain name cannot be empty");
         }
         
-        $result = $this->store->findOneBy(['domainName', '=', $domainName]);
-        if ($result !== null) {
-            $zoneId = $result['zoneId'];
+        try {
+            $sql = "SELECT zoneId FROM service_dns WHERE domain_name = :domainName LIMIT 1";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->bindParam(':domainName', $domainName, PDO::PARAM_STR);
+            $stmt->execute();
+
+            if ($stmt->rowCount() > 0) {
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                $zoneId = $row['zoneId'];
+            } else {
+                throw new \FOSSBilling\Exception("Domain name does not exist.");
+            }
+        } catch (\PDOException $e) {
+            throw new \FOSSBilling\Exception("Error fetching zoneId: " . $e->getMessage());
         }
-        
+
         try {
             $response = $this->client->request('DELETE', "zones/{$zoneId}", [
                 'headers' => $this->headers,
@@ -105,9 +129,20 @@ class Hetzner implements DnsHostingProviderInterface {
             throw new \FOSSBilling\Exception("Domain name cannot be empty");
         }
         
-        $result = $this->store->findOneBy(['domainName', '=', $domainName]);
-        if ($result !== null) {
-            $zoneId = $result['zoneId'];
+        try {
+            $sql = "SELECT zoneId FROM service_dns WHERE domain_name = :domainName LIMIT 1";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->bindParam(':domainName', $domainName, PDO::PARAM_STR);
+            $stmt->execute();
+
+            if ($stmt->rowCount() > 0) {
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                $zoneId = $row['zoneId'];
+            } else {
+                throw new \FOSSBilling\Exception("Domain name does not exist.");
+            }
+        } catch (\PDOException $e) {
+            throw new \FOSSBilling\Exception("Error fetching zoneId: " . $e->getMessage());
         }
 
         try {
@@ -126,33 +161,40 @@ class Hetzner implements DnsHostingProviderInterface {
                 $body = json_decode($response->getBody()->getContents(), true);
                 $recordId = $body['record']['id'] ?? null;
                 
-                // Check if the DNS record exists in the 'dnsRecords' array
-                $key = array_search($recordId, array_column($result['dnsRecords'], 'recordId'));
+                $sql = "SELECT id FROM service_dns WHERE domain_name = :domainName LIMIT 1";
+                $stmt = $this->pdo->prepare($sql);
+                $stmt->bindParam(':domainName', $domainName, PDO::PARAM_STR);
+                $stmt->execute();
 
-                $dnsRecord = [
-                    'recordId' => $recordId,
-                    'recordType' => $rrsetData['type'],
-                    'recordName' => $rrsetData['subname'],
-                ];
-
-                $update = ['dnsRecords' => $result['dnsRecords'] ?? []];
-                $key = array_search($recordId, array_column($update['dnsRecords'], 'recordId'));
-
-                if ($key !== false) {
-                    $update['dnsRecords'][$key] = $dnsRecord;
+                if ($stmt->rowCount() > 0) {
+                    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $domainId = $row['id'];
                 } else {
-                    $update['dnsRecords'][] = $dnsRecord;
+                    throw new \FOSSBilling\Exception("Domain name does not exist.");
+                }
+            
+                $sql = "UPDATE service_dns_records SET recordId = :recordId WHERE type = :type AND host = :subname AND value = :value AND domain_id = :domain_id";
+                $stmt = $this->pdo->prepare($sql);
+                $stmt->bindParam(':recordId', $recordId, PDO::PARAM_STR);
+                $stmt->bindParam(':type', $rrsetData['type'], PDO::PARAM_STR);
+                $stmt->bindParam(':subname', $rrsetData['subname'], PDO::PARAM_STR);
+                $stmt->bindParam(':value', $rrsetData['records'][0], PDO::PARAM_STR);
+                $stmt->bindParam(':domain_id', $domainId, PDO::PARAM_INT);
+                $stmt->execute();
+
+                if ($stmt->rowCount() === 0) {
+                    throw new \FOSSBilling\Exception("No DB update made. Check if the domain name exists.");
                 }
 
-                $this->store->updateById($result['_id'], ['dnsRecords' => $update['dnsRecords']]);
                 return true;
             } else {
                 return false;
             }
         } catch (GuzzleException $e) {
             throw new \FOSSBilling\Exception('Request failed: ' . $e->getMessage());
+        } catch (\PDOException $e) {
+            throw new \FOSSBilling\Exception("Error updating zoneId: " . $e->getMessage());
         }
-
     }
 
     public function createBulkRRsets($domainName, $rrsetDataArray) {
@@ -173,23 +215,31 @@ class Hetzner implements DnsHostingProviderInterface {
         }
             
         try {
-            $result = $this->store->findOneBy(['domainName', '=', $domainName]);
-            if (!$result) {
-                throw new \FOSSBilling\Exception('Domain not found.');
-            }
-            $zoneId = $result['zoneId'];
+            $sql = "SELECT id, zoneId FROM service_dns WHERE domain_name = :domainName LIMIT 1";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->bindParam(':domainName', $domainName, PDO::PARAM_STR);
+            $stmt->execute();
 
-            $recordId = null;
-
-            foreach ($result['dnsRecords'] as $record) {
-                if ($record['recordType'] === $type && $record['recordName'] === $subname) {
-                    $recordId = $record['recordId'];
-                    break;
-                }
+            if ($stmt->rowCount() > 0) {
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                $zoneId = $row['zoneId'];
+                $domainId = $row['id'];
+            } else {
+                throw new \FOSSBilling\Exception("Domain name does not exist.");
             }
 
-            if ($recordId === null) {
-                throw new \FOSSBilling\Exception('DNS record not found.');
+            $sql = "SELECT recordId FROM service_dns_records WHERE type = :type AND host = :subname AND domain_id = :domain_id LIMIT 1";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->bindParam(':type', $type, PDO::PARAM_STR);
+            $stmt->bindParam(':subname', $subname, PDO::PARAM_STR);
+            $stmt->bindParam(':domain_id', $domainId, PDO::PARAM_INT);
+            $stmt->execute();
+
+            if ($stmt->rowCount() > 0) {
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                $recordId = $row['recordId'];
+            } else {
+                throw new \FOSSBilling\Exception("Record not found for the given type and subname.");
             }
 
             $response = $this->client->request('PUT', "records/{$recordId}", [
@@ -210,8 +260,9 @@ class Hetzner implements DnsHostingProviderInterface {
             }
         } catch (GuzzleException $e) {
             throw new \FOSSBilling\Exception('Request failed: ' . $e->getMessage());
+        } catch (\PDOException $e) {
+            throw new \FOSSBilling\Exception("Error in operation: " . $e->getMessage());
         }
-
     }
 
     public function modifyBulkRRsets($domainName, $rrsetDataArray) {
@@ -220,37 +271,37 @@ class Hetzner implements DnsHostingProviderInterface {
 
     public function deleteRRset($domainName, $subname, $type, $value) {
         try {
-            $result = $this->store->findOneBy(['domainName', '=', $domainName]);
-            if (!$result) {
-                throw new \FOSSBilling\Exception('Domain not found.');
-            }
-            $zoneId = $result['zoneId'];
+            $sql = "SELECT id, zoneId FROM service_dns WHERE domain_name = :domainName LIMIT 1";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->bindParam(':domainName', $domainName, PDO::PARAM_STR);
+            $stmt->execute();
 
-            $recordId = null;
-
-            foreach ($result['dnsRecords'] as $record) {
-                if ($record['recordType'] === $type && $record['recordName'] === $subname) {
-                    $recordId = $record['recordId'];
-                    break;
-                }
+            if ($stmt->rowCount() > 0) {
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                $zoneId = $row['zoneId'];
+                $domainId = $row['id'];
+            } else {
+                throw new \FOSSBilling\Exception("Domain name does not exist.");
             }
 
-            if ($recordId === null) {
-                throw new \FOSSBilling\Exception('DNS record not found.');
+            $sql = "SELECT recordId FROM service_dns_records WHERE type = :type AND host = :subname AND domain_id = :domain_id LIMIT 1";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->bindParam(':type', $type, PDO::PARAM_STR);
+            $stmt->bindParam(':subname', $subname, PDO::PARAM_STR);
+            $stmt->bindParam(':domain_id', $domainId, PDO::PARAM_INT);
+            $stmt->execute();
+
+            if ($stmt->rowCount() > 0) {
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                $recordId = $row['recordId'];
+            } else {
+                throw new \FOSSBilling\Exception("Record not found for the given type and subname.");
             }
-            
+
             $response = $this->client->request('DELETE', "records/{$recordId}", [
                 'headers' => $this->headers,
             ]);
             
-            $filteredRecords = array_filter($result['dnsRecords'], function ($record) use ($recordId) {
-                return $record['recordId'] !== $recordId;
-            });
-
-            $result['dnsRecords'] = array_values($filteredRecords);
-            
-            $this->store->updateById($result['_id'], $result);
-
             if ($response->getStatusCode() === 204) {
                 return true;
             } else {
@@ -258,8 +309,9 @@ class Hetzner implements DnsHostingProviderInterface {
             }
         } catch (GuzzleException $e) {
             throw new \FOSSBilling\Exception('Request failed: ' . $e->getMessage());
+        } catch (\PDOException $e) {
+            throw new \FOSSBilling\Exception("Error in operation: " . $e->getMessage());
         }
-
     }
 
     public function deleteBulkRRsets($domainName, $rrsetDataArray) {

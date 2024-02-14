@@ -231,7 +231,6 @@ class Service implements InjectionAwareInterface
             throw new \FOSSBilling\Exception("DNS provider is not set.");
         }
 
-        $this->dnsProvider->createRRset($config['domain_name'], $rrsetData);
         $model->updated_at = date('Y-m-d H:i:s');
         $this->di['db']->store($model);
         
@@ -247,6 +246,8 @@ class Service implements InjectionAwareInterface
         $records->created_at = date('Y-m-d H:i:s');
         $records->updated_at = date('Y-m-d H:i:s');
         $this->di['db']->store($records);
+
+        $this->dnsProvider->createRRset($config['domain_name'], $rrsetData);
 
         return true;
     }
@@ -375,6 +376,7 @@ class Service implements InjectionAwareInterface
             `client_id` bigint(20) NOT NULL,
             `domain_name` varchar(75),
             `provider_id` varchar(11),
+            `zoneId` varchar(100) DEFAULT NULL,
             `config` text NOT NULL,
             `created_at` datetime,
             `updated_at` datetime,
@@ -383,6 +385,7 @@ class Service implements InjectionAwareInterface
         CREATE TABLE IF NOT EXISTS `service_dns_records` (
             `id` bigint(20) NOT NULL AUTO_INCREMENT,
             `domain_id` bigint(20) NOT NULL,
+            `recordId` varchar(100) DEFAULT NULL,
             `type` varchar(10) NOT NULL,
             `host` varchar(255) NOT NULL,
             `value` text NOT NULL,
