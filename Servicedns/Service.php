@@ -33,7 +33,7 @@ class Service implements InjectionAwareInterface
 
         switch ($providerName) {
             case 'Bind':
-                $this->dnsProvider = new Providers\Bind();
+                $this->dnsProvider = new Providers\Bind($config);
                 break;
             case 'Desec':
                 $this->dnsProvider = new Providers\Desec($config);

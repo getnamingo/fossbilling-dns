@@ -4,7 +4,9 @@
         "vultr/vultr-php": "^1.0",
         "badcow/dns": "^4.2",
         "exonet/powerdns-php": "^4.5",
-        "dnsimple/dnsimple": "^1.4"
+        "dnsimple/dnsimple": "^1.4",
+        "namingo/bind9-api-client": "^1.0.2",
+        "spatie/dns": "^2.6"
     },
     "config": {
         "allow-plugins": {

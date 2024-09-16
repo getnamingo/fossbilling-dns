@@ -1,11 +1,16 @@
 # DNS hosting module for FOSSBilling
+
+[![StandWithUkraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/badges/StandWithUkraine.svg)](https://github.com/vshymanskyy/StandWithUkraine/blob/main/docs/README.md)
+
+[![SWUbanner](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner2-direct.svg)](https://github.com/vshymanskyy/StandWithUkraine/blob/main/docs/README.md)
+
 DNS hosting module for FOSSBilling
 
 ## Compatibility
 
 This module is designed for use with the following DNS servers/providers:
 
-- [BIND](https://www.isc.org/bind/)
+- [BIND9](https://www.isc.org/bind/)
 
 - [deSEC](https://desec.io/)
 
@@ -29,21 +34,13 @@ First, download this repository. After successfully downloading the repository, 
 
 Go to `[FOSSBilling]/modules/Servicedns/Providers` directory and run the `composer install` command.
 
-### (BIND Module only) 3. Addition of Synchronization Scripts:
+### (BIND9 Module only) 3. Installation of BIND9 API Server:
 
-The BIND provider has an additional synchronization script which can be found at `[FOSSBilling]/modules/Servicedns/Crons/Bind.php`. It needs to be configured with your BIND installation parameters, so it can generate the zones regularly.
+To use the BIND9 module, you must install the [bind9-api-server](https://github.com/getnamingo/bind9-api-server) on your master BIND server. This API server allows for seamless integration and management of your DNS zones via API.
 
-### (BIND Module only) 4. Setting Up the Cron Job:
+Make sure to configure the API server according to your BIND installation parameters to ensure proper synchronization of your DNS zones.
 
-You need to set up a hourly cron job that runs the sync module. Open crontab using the command `crontab -e` in your terminal.
-
-Add the following cron job:
-
-`0 * * * * php [FOSSBilling]/modules/Servicedns/Crons/Bind.php`
-
-This command schedules the synchronization script to run hourly.
-
-### 5. Activate the DNS hosting module:
+### 4. Activate the DNS hosting module:
 
 Within FOSSBilling, go to **Extensions -> Overview** and activate the `DNS Hosting Product 1.0.0` extension.
 
