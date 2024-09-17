@@ -51,7 +51,7 @@ class Service implements InjectionAwareInterface
                 $this->dnsProvider = new Providers\Vultr($config);
                 break;
             default:
-                throw new \FOSSBilling\Exception("Unknown DNS provider: {$providerName}");
+                throw new \FOSSBilling\InformationException("Unknown DNS provider: {$providerName}");
         }
     }
 
@@ -81,7 +81,7 @@ class Service implements InjectionAwareInterface
     {
         $config = json_decode($order->config, 1);
         if (!is_object($model)) {
-            throw new \FOSSBilling\Exception('Order does not exist.');
+            throw new \FOSSBilling\InformationException('Order does not exist.');
         }
 
         $domainName = isset($order->config) ? json_decode($order->config)->domain_name : null;
@@ -91,7 +91,7 @@ class Service implements InjectionAwareInterface
         
         $this->chooseDnsProvider($config);
         if ($this->dnsProvider === null) {
-            throw new \FOSSBilling\Exception("DNS provider is not set.");
+            throw new \FOSSBilling\InformationException("DNS provider is not set.");
         }
 
         $this->dnsProvider->createDomain($domainName);
@@ -128,22 +128,22 @@ class Service implements InjectionAwareInterface
     public function delete(?OODBBean $order, ?OODBBean $model): void
     {
         if ($order === null) {
-            throw new \FOSSBilling\Exception("Order is not provided.");
+            throw new \FOSSBilling\InformationException("Order is not provided.");
         }
 
         $config = json_decode($order->config, true);
         if (!$config) {
-            throw new \FOSSBilling\Exception("Invalid or missing DNS provider configuration.");
+            throw new \FOSSBilling\InformationException("Invalid or missing DNS provider configuration.");
         }
 
         $this->chooseDnsProvider($config);
         if ($this->dnsProvider === null) {
-            throw new \FOSSBilling\Exception("DNS provider is not set.");
+            throw new \FOSSBilling\InformationException("DNS provider is not set.");
         }
 
         $domainName = $config['domain_name'] ?? null;
         if (empty($domainName)) {
-            throw new \FOSSBilling\Exception("Domain name is not set.");
+            throw new \FOSSBilling\InformationException("Domain name is not set.");
         }
 
         try {
@@ -156,7 +156,7 @@ class Service implements InjectionAwareInterface
                 error_log("Domain $domainName not found in PowerDNS, but proceeding with order deletion.");
             } else {
                 // For other exceptions, rethrow them as they indicate actual issues.
-                throw new \FOSSBilling\Exception("Failed to delete domain $domainName: " . $e->getMessage());
+                throw new \FOSSBilling\InformationException("Failed to delete domain $domainName: " . $e->getMessage());
             }
         }
 
@@ -189,14 +189,14 @@ class Service implements InjectionAwareInterface
      * @return bool Returns true on successful addition of the DNS record, false otherwise.
      */
     public function addRecord(array $data): bool
-    {            
+    {           
         if (!empty($data['order_id'])) {
             $order = $this->di['db']->getExistingModelById('ClientOrder', $data['order_id'], 'Order not found');
             $orderService = $this->di['mod_service']('order');
             $model = $orderService->getOrderService($order);
         }
         if (is_null($model)) {
-            throw new \FOSSBilling\Exception('Domain does not exist');
+            throw new \FOSSBilling\InformationException('Domain does not exist');
         }
 
         try {
@@ -207,7 +207,7 @@ class Service implements InjectionAwareInterface
         }
 
         if (!is_null($client) && $client->id !== $model->client_id) {
-            throw new \FOSSBilling\Exception('Domain does not exist');
+            throw new \FOSSBilling\InformationException('Domain does not exist');
         }
 
         $config = json_decode($model->config, true);
@@ -231,8 +231,10 @@ class Service implements InjectionAwareInterface
 
         // Check if DNS provider is set
         if ($this->dnsProvider === null) {
-            throw new \FOSSBilling\Exception("DNS provider is not set.");
+            throw new \FOSSBilling\InformationException("DNS provider is not set.");
         }
+        
+        $this->dnsProvider->createRRset($config['domain_name'], $rrsetData);
 
         $model->updated_at = date('Y-m-d H:i:s');
         $this->di['db']->store($model);
@@ -250,8 +252,6 @@ class Service implements InjectionAwareInterface
         $records->updated_at = date('Y-m-d H:i:s');
         $this->di['db']->store($records);
 
-        $this->dnsProvider->createRRset($config['domain_name'], $rrsetData);
-
         return true;
     }
     
@@ -263,14 +263,14 @@ class Service implements InjectionAwareInterface
      * @return bool Returns true on successful update of the DNS record, false otherwise.
      */
     public function updateRecord(array $data): bool
-    {            
+    {      
         if (!empty($data['order_id'])) {
             $order = $this->di['db']->getExistingModelById('ClientOrder', $data['order_id'], 'Order not found');
             $orderService = $this->di['mod_service']('order');
             $model = $orderService->getOrderService($order);
         }
         if (is_null($model)) {
-            throw new \FOSSBilling\Exception('Domain does not exist');
+            throw new \FOSSBilling\InformationException('Domain does not exist');
         }
 
         try {
@@ -281,7 +281,7 @@ class Service implements InjectionAwareInterface
         }
 
         if (!is_null($client) && $client->id !== $model->client_id) {
-            throw new \FOSSBilling\Exception('Domain does not exist');
+            throw new \FOSSBilling\InformationException('Domain does not exist');
         }
 
         $config = json_decode($model->config, true);
@@ -303,7 +303,7 @@ class Service implements InjectionAwareInterface
 
         // Check if DNS provider is set
         if ($this->dnsProvider === null) {
-            throw new \FOSSBilling\Exception("DNS provider is not set.");
+            throw new \FOSSBilling\InformationException("DNS provider is not set.");
         }
 
         $this->dnsProvider->modifyRRset($config['domain_name'], $data['record_name'], $data['record_type'], $rrsetData);
@@ -331,7 +331,7 @@ class Service implements InjectionAwareInterface
             $model = $orderService->getOrderService($order);
         }
         if (is_null($model)) {
-            throw new \FOSSBilling\Exception('Domain does not exist');
+            throw new \FOSSBilling\InformationException('Domain does not exist');
         }
 
         try {
@@ -342,7 +342,7 @@ class Service implements InjectionAwareInterface
         }
 
         if (!is_null($client) && $client->id !== $model->client_id) {
-            throw new \FOSSBilling\Exception('Domain does not exist');
+            throw new \FOSSBilling\InformationException('Domain does not exist');
         }
 
         $config = json_decode($model->config, true);
@@ -350,10 +350,11 @@ class Service implements InjectionAwareInterface
 
         // Check if DNS provider is set
         if ($this->dnsProvider === null) {
-            throw new \FOSSBilling\Exception("DNS provider is not set.");
+            throw new \FOSSBilling\InformationException("DNS provider is not set.");
         }
 
         $this->dnsProvider->deleteRRset($config['domain_name'], $data['record_name'], $data['record_type'], $data['record_value']);
+
         $model->updated_at = date('Y-m-d H:i:s');
         $this->di['db']->store($model);
 
@@ -419,9 +420,14 @@ class Service implements InjectionAwareInterface
     {
         $order = $this->di['db']->findOne('ClientOrder', 'service_id = :id AND service_type = "dns"', [':id' => $model->id]);
         if (is_null($order)) {
-            throw new \FOSSBilling\Exception('DNS record does not exist');
+            throw new \FOSSBilling\InformationException('DNS record does not exist');
         }
 
         return $order->status === 'active';
+    }
+    
+    public static function onBeforeAdminCronRun(\Box_Event $event): void
+    {
+        error_log('Cron was called!');
     }
 }
