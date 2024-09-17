@@ -426,7 +426,7 @@ class Service implements InjectionAwareInterface
         return $order->status === 'active';
     }
 
-    public static function onBeforeAdminCronRun(\Box_Event $event): void
+    /*public static function onBeforeAdminCronRun(\Box_Event $event): void
     {
         $di = $event->getDi();
         
@@ -477,5 +477,5 @@ class Service implements InjectionAwareInterface
                 throw new \FOSSBilling\InformationException("Product with title 'DNS hosting' not found.");
             }
         }
-    }
+    }*/
 }
