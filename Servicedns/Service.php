@@ -428,6 +428,50 @@ class Service implements InjectionAwareInterface
 
     public static function onBeforeAdminCronRun(\Box_Event $event): void
     {
-        //error_log('Cron was called!');
+        $di = $event->getDi();
+        
+        // Check if the module 'servicedns' is activated
+        $sqlCheck = 'SELECT COUNT(*) FROM extension WHERE name = :name AND status = :status';
+        $stmtCheck = $di['pdo']->prepare($sqlCheck);
+        $stmtCheck->bindValue(':name', 'servicedns');
+        $stmtCheck->bindValue(':status', 'installed');
+        $stmtCheck->execute();
+        $count = $stmtCheck->fetchColumn();
+
+        if ($count > 0) {
+            // If the module is activated, fetch all rows from 'service_dns'
+            $sqlFetch = 'SELECT * FROM service_dns';
+            $stmtFetch = $di['pdo']->prepare($sqlFetch);
+            $stmtFetch->execute();
+            $rows = $stmtFetch->fetchAll(\PDO::FETCH_ASSOC);
+
+            if (!empty($rows)) {
+                // Find the row with the largest ID
+                $largestIdRow = null;
+                $largestId = -1;
+
+                foreach ($rows as $row) {
+                    if ($row['id'] > $largestId) {
+                        $largestId = $row['id'];
+                        $largestIdRow = $row;
+                    }
+                }
+
+                if ($largestIdRow) {
+                    $configuJson = $largestIdRow['config'];
+                    $configArray = json_decode($configuJson, true);
+                    
+                    // Choose DNS provider (use an instance of the service to call the non-static method)
+                    $service = $di['mod_service']('servicedns');
+                    $service->chooseDnsProvider($configArray);
+
+                    if ($service->dnsProvider === null) {
+                        throw new \FOSSBilling\InformationException("DNS provider is not set.");
+                    }
+
+                    //Continue using listDomains and getDomain
+                }
+            }
+        }
     }
 }
