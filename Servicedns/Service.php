@@ -425,9 +425,9 @@ class Service implements InjectionAwareInterface
 
         return $order->status === 'active';
     }
-    
+
     public static function onBeforeAdminCronRun(\Box_Event $event): void
     {
-        error_log('Cron was called!');
+        //error_log('Cron was called!');
     }
 }
