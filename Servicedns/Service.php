@@ -439,38 +439,42 @@ class Service implements InjectionAwareInterface
         $count = $stmtCheck->fetchColumn();
 
         if ($count > 0) {
-            // If the module is activated, fetch all rows from 'service_dns'
-            $sqlFetch = 'SELECT * FROM service_dns';
-            $stmtFetch = $di['pdo']->prepare($sqlFetch);
-            $stmtFetch->execute();
-            $rows = $stmtFetch->fetchAll(\PDO::FETCH_ASSOC);
+            $sqlFetchProduct = 'SELECT config FROM product WHERE title = :title LIMIT 1';
+            $stmtFetchProduct = $di['pdo']->prepare($sqlFetchProduct);
+            $stmtFetchProduct->bindValue(':title', 'DNS hosting');
+            $stmtFetchProduct->execute();
+            $productRow = $stmtFetchProduct->fetch(\PDO::FETCH_ASSOC);
 
-            if (!empty($rows)) {
-                // Find the row with the largest ID
-                $largestIdRow = null;
-                $largestId = -1;
+            if ($productRow) {
+                $configuJson = $productRow['config'];
+                $configArray = json_decode($configuJson, true);
+
+                $service = $di['mod_service']('servicedns');
+                $service->chooseDnsProvider($configArray);
+
+                if ($service->dnsProvider === null) {
+                    throw new \FOSSBilling\InformationException("DNS provider is not set.");
+                }
+
+                $sqlFetchDomains = 'SELECT * FROM service_dns';
+                $stmtFetchDomains = $di['pdo']->prepare($sqlFetchDomains);
+                $stmtFetchDomains->execute();
+                $rows = $stmtFetchDomains->fetchAll(\PDO::FETCH_ASSOC);
 
                 foreach ($rows as $row) {
-                    if ($row['id'] > $largestId) {
-                        $largestId = $row['id'];
-                        $largestIdRow = $row;
+                    $domainName = $row['domain_name'];
+
+                    try {
+                        // Assuming getDomain is the method you want to call
+                        $result = $service->dnsProvider->getDomain($domainName);
+                        // Do something with $result if needed
+                    } catch (\Exception $e) {
+                        // Handle any exceptions during domain processing
+                        echo "Failed to process domain '{$domainName}': " . $e->getMessage() . "\n";
                     }
                 }
-
-                if ($largestIdRow) {
-                    $configuJson = $largestIdRow['config'];
-                    $configArray = json_decode($configuJson, true);
-                    
-                    // Choose DNS provider (use an instance of the service to call the non-static method)
-                    $service = $di['mod_service']('servicedns');
-                    $service->chooseDnsProvider($configArray);
-
-                    if ($service->dnsProvider === null) {
-                        throw new \FOSSBilling\InformationException("DNS provider is not set.");
-                    }
-
-                    //Continue using listDomains and getDomain
-                }
+            } else {
+                throw new \FOSSBilling\InformationException("Product with title 'DNS hosting' not found.");
             }
         }
     }

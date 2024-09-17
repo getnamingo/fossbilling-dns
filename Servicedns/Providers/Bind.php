@@ -66,7 +66,16 @@ class Bind implements DnsHostingProviderInterface {
     }
 
     public function getDomain($domainName) {
-        throw new \FOSSBilling\InformationException("Not yet implemented");
+        if (empty($domainName)) {
+            throw new \FOSSBilling\InformationException("Domain name cannot be empty");
+        }
+
+        try {
+            $records = $this->client->getRecords($domainName);
+            return $records;
+        } catch (\Exception $e) {
+           throw new \FOSSBilling\InformationException("Failed to fetch zone: " . $domainName . ". Error: " . $e->getMessage());
+        }
     }
 
     public function getResponsibleDomain($qname) {
@@ -102,8 +111,13 @@ class Bind implements DnsHostingProviderInterface {
             'ttl' => $rrsetData['ttl'],
             'rdata' => $rrsetData['records'][0]
         ];
-
-        $this->client->addRecord($domainName, $record);
+        
+        try {
+            $this->client->addRecord($domainName, $record);
+            return true;
+        } catch (\Exception $e) {
+           throw new \FOSSBilling\InformationException("Failed to create zone for domain: " . $domainName . ". Error: " . $e->getMessage());
+        }
 
         return json_decode($domainName, true);
     }
@@ -132,7 +146,6 @@ class Bind implements DnsHostingProviderInterface {
         $recordValue = $rrsetData['records'][0];
         $fqdn = $subname . '.' . $domainName;
 
-        // Use Spatie DNS to query a specific DNS server
         $dns = new Dns();
         $dns->useNameserver($this->api_ip);
         $record = $dns->getRecords($fqdn, strtoupper($type))[0];
