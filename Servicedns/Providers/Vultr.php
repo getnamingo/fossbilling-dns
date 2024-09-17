@@ -15,7 +15,7 @@ class Vultr implements DnsHostingProviderInterface {
     public function __construct($config) {
         $token = $config['apikey'];
         if (empty($token)) {
-            throw new \FOSSBilling\Exception("API token cannot be empty");
+            throw new \FOSSBilling\InformationException("API token cannot be empty");
         }
 
         $this->client = VultrClient::create($token);
@@ -23,43 +23,43 @@ class Vultr implements DnsHostingProviderInterface {
 
     public function createDomain($domainName) {
         if (empty($domainName)) {
-            throw new \FOSSBilling\Exception("Domain name cannot be empty");
+            throw new \FOSSBilling\InformationException("Domain name cannot be empty");
         }
 
         try {
             $response = $this->client->dns->createDomain($domainName);
             return json_decode($response->getDomain(), true);
         } catch (Exception $e) {
-            throw new \FOSSBilling\Exception("Error creating domain: " . $e->getMessage());
+            throw new \FOSSBilling\InformationException("Error creating domain: " . $e->getMessage());
         }
     }
 
     public function listDomains() {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function getDomain($domainName) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function getResponsibleDomain($qname) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function exportDomainAsZonefile($domainName) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function deleteDomain($domainName) {
         if (empty($domainName)) {
-            throw new \FOSSBilling\Exception("Domain name cannot be empty");
+            throw new \FOSSBilling\InformationException("Domain name cannot be empty");
         }
 
         try {
             $response = $this->client->dns->deleteDomain($domainName);
             return json_decode($response->getDomain(), true);
         } catch (Exception $e) {
-            throw new \FOSSBilling\Exception("Error deleting domain: " . $e->getMessage());
+            throw new \FOSSBilling\InformationException("Error deleting domain: " . $e->getMessage());
         }
     }
     
@@ -88,20 +88,20 @@ class Vultr implements DnsHostingProviderInterface {
             $response = $this->client->dns->createRecord($domainName, $record);
             return json_decode($domainName, true);
         } catch (Exception $e) {
-            throw new \FOSSBilling\Exception("Error creating record: " . $e->getMessage());
+            throw new \FOSSBilling\InformationException("Error creating record: " . $e->getMessage());
         }
     }
 
     public function createBulkRRsets($domainName, $rrsetDataArray) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function retrieveAllRRsets($domainName) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function retrieveSpecificRRset($domainName, $subname, $type) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function modifyRRset($domainName, $subname, $type, $rrsetData) {
@@ -126,7 +126,7 @@ class Vultr implements DnsHostingProviderInterface {
             }
             
             if ($recordId === null) {
-                throw new \FOSSBilling\Exception("Error: No record found with name '$subname' and type '$type'");
+                throw new \FOSSBilling\InformationException("Error: No record found with name '$subname' and type '$type'");
             }
 
             $record = new Record();
@@ -134,7 +134,7 @@ class Vultr implements DnsHostingProviderInterface {
             if (isset($recordId)) {
                 $record->setId($recordId);
             } else {
-                throw new \FOSSBilling\Exception("Record ID is required for updating");
+                throw new \FOSSBilling\InformationException("Record ID is required for updating");
             }
             if (isset($type)) {
                 $record->setType($type);
@@ -153,12 +153,12 @@ class Vultr implements DnsHostingProviderInterface {
             $response = $this->client->dns->updateRecord($domainName, $record);
             return json_decode($domainName, true);
         } catch (Exception $e) {
-            throw new \FOSSBilling\Exception("Error updating record: " . $e->getMessage());
+            throw new \FOSSBilling\InformationException("Error updating record: " . $e->getMessage());
         }
     }
 
     public function modifyBulkRRsets($domainName, $rrsetDataArray) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function deleteRRset($domainName, $subname, $type, $value) {
@@ -183,18 +183,18 @@ class Vultr implements DnsHostingProviderInterface {
             }
             
             if ($recordId === null) {
-                throw new \FOSSBilling\Exception("Error: No record found with name '$subname' and type '$type'");
+                throw new \FOSSBilling\InformationException("Error: No record found with name '$subname' and type '$type'");
             }
 
             $response = $this->client->dns->deleteRecord($domainName, $recordId);
             return json_decode($domainName, true);
         } catch (Exception $e) {
-            throw new \FOSSBilling\Exception("Error deleting record: " . $e->getMessage());
+            throw new \FOSSBilling\InformationException("Error deleting record: " . $e->getMessage());
         }
     }
 
     public function deleteBulkRRsets($domainName, $rrsetDataArray) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
     
 }

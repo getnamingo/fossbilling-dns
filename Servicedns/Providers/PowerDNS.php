@@ -15,7 +15,7 @@ class PowerDNS implements DnsHostingProviderInterface {
         $token = $config['apikey'];
         $api_ip = $config['powerdnsapi'];
         if (empty($token)) {
-            throw new \FOSSBilling\Exception("API token cannot be empty");
+            throw new \FOSSBilling\InformationException("API token cannot be empty");
         }
         if (empty($api_ip)) {
             $api_ip = '127.0.0.1';
@@ -35,7 +35,7 @@ class PowerDNS implements DnsHostingProviderInterface {
 
     public function createDomain($domainName) {
         if (empty($domainName)) {
-            throw new \FOSSBilling\Exception("Domain name cannot be empty");
+            throw new \FOSSBilling\InformationException("Domain name cannot be empty");
         }
 
         $nsRecords = array_filter($this->nsRecords);
@@ -50,32 +50,32 @@ class PowerDNS implements DnsHostingProviderInterface {
         } catch (\Exception $e) {
             // Throw an exception to indicate failure, including for conflicts.
             if (strpos($e->getMessage(), 'Conflict') !== false) {
-                throw new \FOSSBilling\Exception("Zone already exists for domain: " . $domainName);
+                throw new \FOSSBilling\InformationException("Zone already exists for domain: " . $domainName);
             } else {
-                throw new \FOSSBilling\Exception("Failed to create zone for domain: " . $domainName . ". Error: " . $e->getMessage());
+                throw new \FOSSBilling\InformationException("Failed to create zone for domain: " . $domainName . ". Error: " . $e->getMessage());
             }
         }
     }
 
     public function listDomains() {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function getDomain($domainName) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function getResponsibleDomain($qname) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function exportDomainAsZonefile($domainName) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function deleteDomain($domainName) {
         if (empty($domainName)) {
-            throw new \FOSSBilling\Exception("Domain name cannot be empty");
+            throw new \FOSSBilling\InformationException("Domain name cannot be empty");
         }
         
         $this->client->deleteZone($domainName);
@@ -87,7 +87,7 @@ class PowerDNS implements DnsHostingProviderInterface {
         $zone = $this->client->zone($domainName);
         
         if (!isset($rrsetData['subname'], $rrsetData['type'], $rrsetData['ttl'], $rrsetData['records'])) {
-            throw new \FOSSBilling\Exception("Missing data for creating RRset");
+            throw new \FOSSBilling\InformationException("Missing data for creating RRset");
         }
         
         $subname = $rrsetData['subname'];
@@ -118,7 +118,7 @@ class PowerDNS implements DnsHostingProviderInterface {
                 $recordType = RecordType::DS;
                 break;
             default:
-                throw new \FOSSBilling\Exception("Invalid record type");
+                throw new \FOSSBilling\InformationException("Invalid record type");
         }
 
         $zone->create($subname, $recordType, $recordValue, $ttl);
@@ -127,22 +127,22 @@ class PowerDNS implements DnsHostingProviderInterface {
     }
 
     public function createBulkRRsets($domainName, $rrsetDataArray) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function retrieveAllRRsets($domainName) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function retrieveSpecificRRset($domainName, $subname, $type) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function modifyRRset($domainName, $subname, $type, $rrsetData) {
         $zone = $this->client->zone($domainName);
 
         if (!isset($subname, $type, $rrsetData['ttl'], $rrsetData['records'])) {
-            throw new \FOSSBilling\Exception("Missing data for creating RRset");
+            throw new \FOSSBilling\InformationException("Missing data for creating RRset");
         }
         
         $ttl = $rrsetData['ttl'];
@@ -171,7 +171,7 @@ class PowerDNS implements DnsHostingProviderInterface {
                 $recordType = RecordType::DS;
                 break;
             default:
-                throw new \FOSSBilling\Exception("Invalid record type");
+                throw new \FOSSBilling\InformationException("Invalid record type");
         }
 
         $zone->create($subname, $recordType, $recordValue, $ttl);
@@ -180,14 +180,14 @@ class PowerDNS implements DnsHostingProviderInterface {
     }
 
     public function modifyBulkRRsets($domainName, $rrsetDataArray) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function deleteRRset($domainName, $subname, $type, $value) {
         $zone = $this->client->zone($domainName);
         
         if (!isset($subname, $type, $value)) {
-            throw new \FOSSBilling\Exception("Missing data for creating RRset");
+            throw new \FOSSBilling\InformationException("Missing data for creating RRset");
         }
         
         switch ($type) {
@@ -213,7 +213,7 @@ class PowerDNS implements DnsHostingProviderInterface {
                 $recordType = RecordType::DS;
                 break;
             default:
-                throw new \FOSSBilling\Exception("Invalid record type");
+                throw new \FOSSBilling\InformationException("Invalid record type");
         }
 
         $zone->find($subname, $recordType)->delete();
@@ -222,7 +222,7 @@ class PowerDNS implements DnsHostingProviderInterface {
     }
 
     public function deleteBulkRRsets($domainName, $rrsetDataArray) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
 }

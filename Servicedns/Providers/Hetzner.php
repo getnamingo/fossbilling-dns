@@ -15,20 +15,19 @@ class Hetzner implements DnsHostingProviderInterface {
 
     public function __construct($config) {
         // Load DB configuration
-        $dbc = include __DIR__ . '/../../../config.php';
-        $this->dbConfig = $dbc['db'];
-        
+        $this->dbConfig = \FOSSBilling\Config::getProperty('db', []);
+
         try {
             $dsn = $this->dbConfig["type"] . ":host=" . $this->dbConfig["host"] . ";port=" . $this->dbConfig["port"] . ";dbname=" . $this->dbConfig["name"];
             $this->pdo = new PDO($dsn, $this->dbConfig['user'], $this->dbConfig['password']);
             $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         } catch (\PDOException $e) {
-            throw new \FOSSBilling\Exception("Connection failed: " . $e->getMessage());
+            throw new \FOSSBilling\InformationException("Connection failed: " . $e->getMessage());
         }
         
         $token = $config['apikey'];
         if (empty($token)) {
-            throw new \FOSSBilling\Exception("API token cannot be empty");
+            throw new \FOSSBilling\InformationException("API token cannot be empty");
         }
 
         $this->client = new Client(['base_uri' => $this->baseUrl]);
@@ -40,7 +39,7 @@ class Hetzner implements DnsHostingProviderInterface {
 
     public function createDomain($domainName) {
         if (empty($domainName)) {
-            throw new \FOSSBilling\Exception("Domain name cannot be empty");
+            throw new \FOSSBilling\InformationException("Domain name cannot be empty");
         }
             
         try {
@@ -60,37 +59,37 @@ class Hetzner implements DnsHostingProviderInterface {
                 $stmt->execute();
 
                 if ($stmt->rowCount() === 0) {
-                    throw new \FOSSBilling\Exception("No DB update made. Check if the domain name exists.");
+                    throw new \FOSSBilling\InformationException("No DB update made. Check if the domain name exists.");
                 }
             } catch (\PDOException $e) {
-                throw new \FOSSBilling\Exception("Error updating zoneId: " . $e->getMessage());
+                throw new \FOSSBilling\InformationException("Error updating zoneId: " . $e->getMessage());
             }
             
             return json_decode($response->getBody(), true);
         } catch (\Exception $e) {
-            throw new \FOSSBilling\Exception('Request failed: ' . $e->getMessage());
+            throw new \FOSSBilling\InformationException('Request failed: ' . $e->getMessage());
         }
     }
 
     public function listDomains() {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function getDomain($domainName) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function getResponsibleDomain($qname) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function exportDomainAsZonefile($domainName) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function deleteDomain($domainName) {
         if (empty($domainName)) {
-            throw new \FOSSBilling\Exception("Domain name cannot be empty");
+            throw new \FOSSBilling\InformationException("Domain name cannot be empty");
         }
         
         try {
@@ -103,10 +102,10 @@ class Hetzner implements DnsHostingProviderInterface {
                 $row = $stmt->fetch(PDO::FETCH_ASSOC);
                 $zoneId = $row['zoneId'];
             } else {
-                throw new \FOSSBilling\Exception("Domain name does not exist.");
+                throw new \FOSSBilling\InformationException("Domain name does not exist.");
             }
         } catch (\PDOException $e) {
-            throw new \FOSSBilling\Exception("Error fetching zoneId: " . $e->getMessage());
+            throw new \FOSSBilling\InformationException("Error fetching zoneId: " . $e->getMessage());
         }
 
         try {
@@ -120,13 +119,13 @@ class Hetzner implements DnsHostingProviderInterface {
                 return false;
             }
         } catch (GuzzleException $e) {
-            throw new \FOSSBilling\Exception('Request failed: ' . $e->getMessage());
+            throw new \FOSSBilling\InformationException('Request failed: ' . $e->getMessage());
         }
     }
     
     public function createRRset($domainName, $rrsetData) {
         if (empty($domainName)) {
-            throw new \FOSSBilling\Exception("Domain name cannot be empty");
+            throw new \FOSSBilling\InformationException("Domain name cannot be empty");
         }
         
         try {
@@ -139,10 +138,10 @@ class Hetzner implements DnsHostingProviderInterface {
                 $row = $stmt->fetch(PDO::FETCH_ASSOC);
                 $zoneId = $row['zoneId'];
             } else {
-                throw new \FOSSBilling\Exception("Domain name does not exist.");
+                throw new \FOSSBilling\InformationException("Domain name does not exist.");
             }
         } catch (\PDOException $e) {
-            throw new \FOSSBilling\Exception("Error fetching zoneId: " . $e->getMessage());
+            throw new \FOSSBilling\InformationException("Error fetching zoneId: " . $e->getMessage());
         }
 
         try {
@@ -170,7 +169,7 @@ class Hetzner implements DnsHostingProviderInterface {
                     $row = $stmt->fetch(PDO::FETCH_ASSOC);
                     $domainId = $row['id'];
                 } else {
-                    throw new \FOSSBilling\Exception("Domain name does not exist.");
+                    throw new \FOSSBilling\InformationException("Domain name does not exist.");
                 }
             
                 $sql = "UPDATE service_dns_records SET recordId = :recordId WHERE type = :type AND host = :subname AND value = :value AND domain_id = :domain_id";
@@ -183,7 +182,7 @@ class Hetzner implements DnsHostingProviderInterface {
                 $stmt->execute();
 
                 if ($stmt->rowCount() === 0) {
-                    throw new \FOSSBilling\Exception("No DB update made. Check if the domain name exists.");
+                    throw new \FOSSBilling\InformationException("No DB update made. Check if the domain name exists.");
                 }
 
                 return true;
@@ -191,27 +190,27 @@ class Hetzner implements DnsHostingProviderInterface {
                 return false;
             }
         } catch (GuzzleException $e) {
-            throw new \FOSSBilling\Exception('Request failed: ' . $e->getMessage());
+            throw new \FOSSBilling\InformationException('Request failed: ' . $e->getMessage());
         } catch (\PDOException $e) {
-            throw new \FOSSBilling\Exception("Error updating zoneId: " . $e->getMessage());
+            throw new \FOSSBilling\InformationException("Error updating zoneId: " . $e->getMessage());
         }
     }
 
     public function createBulkRRsets($domainName, $rrsetDataArray) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function retrieveAllRRsets($domainName) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function retrieveSpecificRRset($domainName, $subname, $type) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function modifyRRset($domainName, $subname, $type, $rrsetData) {
         if (empty($domainName)) {
-            throw new \FOSSBilling\Exception("Domain name cannot be empty");
+            throw new \FOSSBilling\InformationException("Domain name cannot be empty");
         }
             
         try {
@@ -225,7 +224,7 @@ class Hetzner implements DnsHostingProviderInterface {
                 $zoneId = $row['zoneId'];
                 $domainId = $row['id'];
             } else {
-                throw new \FOSSBilling\Exception("Domain name does not exist.");
+                throw new \FOSSBilling\InformationException("Domain name does not exist.");
             }
 
             $sql = "SELECT recordId FROM service_dns_records WHERE type = :type AND host = :subname AND domain_id = :domain_id LIMIT 1";
@@ -239,7 +238,7 @@ class Hetzner implements DnsHostingProviderInterface {
                 $row = $stmt->fetch(PDO::FETCH_ASSOC);
                 $recordId = $row['recordId'];
             } else {
-                throw new \FOSSBilling\Exception("Record not found for the given type and subname.");
+                throw new \FOSSBilling\InformationException("Record not found for the given type and subname.");
             }
 
             $response = $this->client->request('PUT', "records/{$recordId}", [
@@ -259,14 +258,14 @@ class Hetzner implements DnsHostingProviderInterface {
                 return false;
             }
         } catch (GuzzleException $e) {
-            throw new \FOSSBilling\Exception('Request failed: ' . $e->getMessage());
+            throw new \FOSSBilling\InformationException('Request failed: ' . $e->getMessage());
         } catch (\PDOException $e) {
-            throw new \FOSSBilling\Exception("Error in operation: " . $e->getMessage());
+            throw new \FOSSBilling\InformationException("Error in operation: " . $e->getMessage());
         }
     }
 
     public function modifyBulkRRsets($domainName, $rrsetDataArray) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function deleteRRset($domainName, $subname, $type, $value) {
@@ -281,7 +280,7 @@ class Hetzner implements DnsHostingProviderInterface {
                 $zoneId = $row['zoneId'];
                 $domainId = $row['id'];
             } else {
-                throw new \FOSSBilling\Exception("Domain name does not exist.");
+                throw new \FOSSBilling\InformationException("Domain name does not exist.");
             }
 
             $sql = "SELECT recordId FROM service_dns_records WHERE type = :type AND host = :subname AND domain_id = :domain_id LIMIT 1";
@@ -295,7 +294,7 @@ class Hetzner implements DnsHostingProviderInterface {
                 $row = $stmt->fetch(PDO::FETCH_ASSOC);
                 $recordId = $row['recordId'];
             } else {
-                throw new \FOSSBilling\Exception("Record not found for the given type and subname.");
+                throw new \FOSSBilling\InformationException("Record not found for the given type and subname.");
             }
 
             $response = $this->client->request('DELETE', "records/{$recordId}", [
@@ -308,14 +307,14 @@ class Hetzner implements DnsHostingProviderInterface {
                 return false;
             }
         } catch (GuzzleException $e) {
-            throw new \FOSSBilling\Exception('Request failed: ' . $e->getMessage());
+            throw new \FOSSBilling\InformationException('Request failed: ' . $e->getMessage());
         } catch (\PDOException $e) {
-            throw new \FOSSBilling\Exception("Error in operation: " . $e->getMessage());
+            throw new \FOSSBilling\InformationException("Error in operation: " . $e->getMessage());
         }
     }
 
     public function deleteBulkRRsets($domainName, $rrsetDataArray) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
     
 }

@@ -13,7 +13,7 @@ class Desec implements DnsHostingProviderInterface {
     public function __construct($config) {
         $token = $config['apikey'];
         if (empty($token)) {
-            throw new \FOSSBilling\Exception("API token cannot be empty");
+            throw new \FOSSBilling\InformationException("API token cannot be empty");
         }
 
         $this->client = new Client(['base_uri' => $this->baseUrl]);
@@ -26,7 +26,7 @@ class Desec implements DnsHostingProviderInterface {
 
     public function createDomain($domainName) {
         if (empty($domainName)) {
-            throw new \FOSSBilling\Exception("Domain name cannot be empty");
+            throw new \FOSSBilling\InformationException("Domain name cannot be empty");
         }
 
         $response = $this->client->request('POST', '', [
@@ -59,7 +59,7 @@ class Desec implements DnsHostingProviderInterface {
 
     public function deleteDomain($domainName) {
         if (empty($domainName)) {
-            throw new \FOSSBilling\Exception("Domain name cannot be empty");
+            throw new \FOSSBilling\InformationException("Domain name cannot be empty");
         }
 
         $response = $this->client->request('DELETE', $domainName . "/", ['headers' => $this->headers]);

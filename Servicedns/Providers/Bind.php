@@ -13,7 +13,7 @@ class Bind implements DnsHostingProviderInterface {
         $token = $config['apikey'];
         $api_ip = $config['powerdnsapi'];
         if (empty($token)) {
-            throw new \FOSSBilling\Exception("API token cannot be empty");
+            throw new \FOSSBilling\InformationException("API token cannot be empty");
         }
         if (empty($api_ip)) {
             $api_ip = '127.0.0.1';
@@ -23,7 +23,7 @@ class Bind implements DnsHostingProviderInterface {
         list($username, $password) = explode(':', $token, 2);
         
         if (empty($username) || empty($password)) {
-            throw new \FOSSBilling\Exception("API token must be in the format 'username:password'");
+            throw new \FOSSBilling\InformationException("API token must be in the format 'username:password'");
         }
         
         // Dynamically pull nameserver settings from the configuration
@@ -44,7 +44,7 @@ class Bind implements DnsHostingProviderInterface {
 
     public function createDomain($domainName) {
         if (empty($domainName)) {
-            throw new \FOSSBilling\Exception("Domain name cannot be empty");
+            throw new \FOSSBilling\InformationException("Domain name cannot be empty");
         }
 
         try {
@@ -54,32 +54,32 @@ class Bind implements DnsHostingProviderInterface {
         } catch (\Exception $e) {
             // Throw an exception to indicate failure, including for conflicts.
             if (strpos($e->getMessage(), 'Conflict') !== false) {
-                throw new \FOSSBilling\Exception("Zone already exists for domain: " . $domainName);
+                throw new \FOSSBilling\InformationException("Zone already exists for domain: " . $domainName);
             } else {
-                throw new \FOSSBilling\Exception("Failed to create zone for domain: " . $domainName . ". Error: " . $e->getMessage());
+                throw new \FOSSBilling\InformationException("Failed to create zone for domain: " . $domainName . ". Error: " . $e->getMessage());
             }
         }
     }
 
     public function listDomains() {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function getDomain($domainName) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function getResponsibleDomain($qname) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function exportDomainAsZonefile($domainName) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function deleteDomain($domainName) {
         if (empty($domainName)) {
-            throw new \FOSSBilling\Exception("Domain name cannot be empty");
+            throw new \FOSSBilling\InformationException("Domain name cannot be empty");
         }
         
         $this->client->deleteZone($domainName);
@@ -89,11 +89,11 @@ class Bind implements DnsHostingProviderInterface {
     
     public function createRRset($domainName, $rrsetData) {
         if (empty($domainName)) {
-            throw new \FOSSBilling\Exception("Domain name cannot be empty");
+            throw new \FOSSBilling\InformationException("Domain name cannot be empty");
         }
 
         if (!isset($rrsetData['subname'], $rrsetData['type'], $rrsetData['ttl'], $rrsetData['records'])) {
-            throw new \FOSSBilling\Exception("Missing data for creating RRset");
+            throw new \FOSSBilling\InformationException("Missing data for creating RRset");
         }
         
         $record = [
@@ -109,24 +109,24 @@ class Bind implements DnsHostingProviderInterface {
     }
 
     public function createBulkRRsets($domainName, $rrsetDataArray) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function retrieveAllRRsets($domainName) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function retrieveSpecificRRset($domainName, $subname, $type) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function modifyRRset($domainName, $subname, $type, $rrsetData) {
         if (empty($domainName)) {
-            throw new \FOSSBilling\Exception("Domain name cannot be empty");
+            throw new \FOSSBilling\InformationException("Domain name cannot be empty");
         }
 
         if (!isset($subname, $type, $rrsetData['ttl'], $rrsetData['records'])) {
-            throw new \FOSSBilling\Exception("Missing data for creating RRset");
+            throw new \FOSSBilling\InformationException("Missing data for creating RRset");
         }
 
         $recordValue = $rrsetData['records'][0];
@@ -139,7 +139,7 @@ class Bind implements DnsHostingProviderInterface {
         
         // Check if the desired record type was found
         if (empty($record)) {
-            throw new \FOSSBilling\Exception("Failed to retrieve current $type record for $fqdn");
+            throw new \FOSSBilling\InformationException("Failed to retrieve current $type record for $fqdn");
         }
 
         $recordString = (string)$record;
@@ -156,7 +156,7 @@ class Bind implements DnsHostingProviderInterface {
         }
 
         if ($currentRecordValue === null) {
-            throw new \FOSSBilling\Exception("Failed to retrieve current $type record for $fqdn");
+            throw new \FOSSBilling\InformationException("Failed to retrieve current $type record for $fqdn");
         }
 
         // Prepare the current record for the update
@@ -175,16 +175,16 @@ class Bind implements DnsHostingProviderInterface {
     }
 
     public function modifyBulkRRsets($domainName, $rrsetDataArray) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
     public function deleteRRset($domainName, $subname, $type, $value) {
         if (empty($domainName)) {
-            throw new \FOSSBilling\Exception("Domain name cannot be empty");
+            throw new \FOSSBilling\InformationException("Domain name cannot be empty");
         }
 
         if (!isset($subname, $type, $value)) {
-            throw new \FOSSBilling\Exception("Missing data for creating RRset");
+            throw new \FOSSBilling\InformationException("Missing data for creating RRset");
         }
         
         $record = [
@@ -199,7 +199,7 @@ class Bind implements DnsHostingProviderInterface {
     }
 
     public function deleteBulkRRsets($domainName, $rrsetDataArray) {
-        throw new \FOSSBilling\Exception("Not yet implemented");
+        throw new \FOSSBilling\InformationException("Not yet implemented");
     }
 
 }
