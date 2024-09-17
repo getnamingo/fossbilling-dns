@@ -466,7 +466,7 @@ class Service implements InjectionAwareInterface
 
                     try {
                         // Assuming getDomain is the method you want to call
-                        $result = $service->dnsProvider->getDomain($domainName);
+                        //$result = $service->dnsProvider->getDomain($domainName);
                         // Do something with $result if needed
                     } catch (\Exception $e) {
                         // Handle any exceptions during domain processing
