@@ -104,12 +104,25 @@ class Bind implements DnsHostingProviderInterface {
         if (!isset($rrsetData['subname'], $rrsetData['type'], $rrsetData['ttl'], $rrsetData['records'])) {
             throw new \FOSSBilling\InformationException("Missing data for creating RRset");
         }
+
+        if (strtoupper($rrsetData['type']) === 'MX') {
+            $priority = (int)($rrsetData['priority'] ?? 10);
+            $exchange = rtrim($rrsetData['records'][0], '.');
+
+            if (filter_var(rtrim($rrsetData['records'][0]), FILTER_VALIDATE_IP)) {
+                throw new \Exception('MX records must point to a hostname, not an IP address.');
+            }
+
+            $rdata = "$priority $exchange";
+        } else {
+            $rdata = $rrsetData['records'][0];
+        }
         
         $record = [
             'name' => $rrsetData['subname'],
             'type' => $rrsetData['type'],
             'ttl' => $rrsetData['ttl'],
-            'rdata' => $rrsetData['records'][0]
+            'rdata' => $rdata
         ];
         
         try {
@@ -144,7 +157,7 @@ class Bind implements DnsHostingProviderInterface {
         }
 
         $recordValue = $rrsetData['records'][0];
-        $fqdn = $subname . '.' . $domainName;
+        $fqdn = ($subname === '@') ? ltrim($domainName, '.') : "$subname.$domainName"; 
 
         $dns = new Dns();
         $dns->useNameserver($this->api_ip);
@@ -162,7 +175,7 @@ class Bind implements DnsHostingProviderInterface {
         $recordType = strtoupper($recordParts[3]); // The 4th element is the type (e.g., 'A', 'MX', 'TXT')
         if ($recordType === 'MX') {
             // For MX, the second last element is the actual value (skip the priority)
-            $currentRecordValue = $recordParts[count($recordParts) - 2];
+            $currentRecordValue = $recordParts[4] . ' ' . end($recordParts);
         } else {
             // For other types, take the last element
             $currentRecordValue = end($recordParts);

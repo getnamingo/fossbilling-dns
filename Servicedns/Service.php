@@ -353,6 +353,10 @@ class Service implements InjectionAwareInterface
             throw new \FOSSBilling\InformationException("DNS provider is not set.");
         }
 
+        if ($data['record_type'] === 'MX') { 
+            $data['record_value'] = $data['record_priority'] . ' ' . $data['record_value'];
+        }
+
         $this->dnsProvider->deleteRRset($config['domain_name'], $data['record_name'], $data['record_type'], $data['record_value']);
 
         $model->updated_at = date('Y-m-d H:i:s');
