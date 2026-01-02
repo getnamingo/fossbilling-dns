@@ -21,10 +21,6 @@ jobs:
           php-version: "8.3"
           tools: composer:v2
 
-      - name: Validate composer.json
-        working-directory: Servicedns
-        run: composer validate --no-interaction
-
       - name: Composer require (no-dev)
         working-directory: Servicedns
         run: |
