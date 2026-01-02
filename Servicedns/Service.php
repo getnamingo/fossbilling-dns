@@ -10,8 +10,14 @@
 
 namespace Box\Mod\Servicedns;
 
+define('PLEX_TABLE_ZONES', 'service_dns');
+define('PLEX_TABLE_RECORDS', 'service_dns_records');
+
+require_once __DIR__ . '/vendor/autoload.php';
+
 use FOSSBilling\InjectionAwareInterface;
 use RedBeanPHP\OODBBean;
+use PlexDNS\Service as PlexService;
 
 class Service implements InjectionAwareInterface
 {
@@ -64,37 +70,56 @@ class Service implements InjectionAwareInterface
 
     public function create(OODBBean $order)
     {
+        $config = json_decode((string)$order->config, true) ?: [];
+        $domainName = $config['domain_name'] ?? null;
+
         $model = $this->di['db']->dispense('service_dns');
-        $model->client_id = $order->client_id;
-        $model->config = $order->config;
-        $domainName = isset($order->config) ? json_decode($order->config)->domain_name : null;
+        $model->client_id   = $order->client_id;
+        $model->config      = $order->config;
         $model->domain_name = $domainName;
 
         $model->created_at = date('Y-m-d H:i:s');
         $model->updated_at = date('Y-m-d H:i:s');
+
         $this->di['db']->store($model);
+
+        $order->service_id = $model->id;
+        $order->title = $domainName ? ('DNS: ' . $domainName) : 'DNS';
+        $this->di['db']->store($order);
 
         return $model;
     }
 
     public function activate(OODBBean $order, OODBBean $model): bool
     {
-        $config = json_decode($order->config, 1);
-        if (!is_object($model)) {
+        if (!$model || empty($model->id)) {
             throw new \FOSSBilling\InformationException('Order does not exist.');
         }
 
-        $domainName = isset($order->config) ? json_decode($order->config)->domain_name : null;
-        $model->domain_name = $domainName;
-        $model->updated_at = date('Y-m-d H:i:s');
-        $this->di['db']->store($model);
-        
-        $this->chooseDnsProvider($config);
-        if ($this->dnsProvider === null) {
-            throw new \FOSSBilling\InformationException("DNS provider is not set.");
-        }
+        $config = json_decode((string)$order->config, true) ?: [];
+        $domainName = $config['domain_name'] ?? null;
+        $provider   = $config['provider'] ?? null;
+        $apikey     = $config['apikey'] ?? null;
 
-        $this->dnsProvider->createDomain($domainName);
+        $model->domain_name = $domainName;
+        $model->updated_at  = date('Y-m-d H:i:s');
+        $this->di['db']->store($model);
+
+        $service = new PlexService($this->di['pdo']);
+
+        $domainOrder = [
+            'client_id' => $order->client_id,
+            'config'    => json_encode([
+                'domain_name' => $domainName,
+                'provider'    => $provider,
+                'apikey'      => $apikey,
+            ]),
+        ];
+
+        $domain = $service->createDomain($domainOrder);
+
+        $model->config      = $order->config;
+        $this->di['db']->store($model);
 
         return true;
     }
@@ -131,36 +156,53 @@ class Service implements InjectionAwareInterface
             throw new \FOSSBilling\InformationException("Order is not provided.");
         }
 
-        $config = json_decode($order->config, true);
-        if (!$config) {
-            throw new \FOSSBilling\InformationException("Invalid or missing DNS provider configuration.");
-        }
-
-        $this->chooseDnsProvider($config);
-        if ($this->dnsProvider === null) {
-            throw new \FOSSBilling\InformationException("DNS provider is not set.");
-        }
-
+        $config = json_decode((string)$order->config, true) ?: [];
         $domainName = $config['domain_name'] ?? null;
+        $provider   = $config['provider'] ?? null;
+        $apiKey     = $config['apikey'] ?? null;
+
         if (empty($domainName)) {
-            throw new \FOSSBilling\InformationException("Domain name is not set.");
+            throw new \FOSSBilling\InformationException('Domain name is not set.');
+        }
+        if (empty($provider)) {
+            throw new \FOSSBilling\InformationException('DNS provider is not set.');
         }
 
         try {
-            // Attempt to delete the domain
-            $this->dnsProvider->deleteDomain($domainName);
-        } catch (\Exception $e) {
-            // Check if the exception is due to the domain not being found.
-            if (strpos($e->getMessage(), 'Not Found') !== false) {
-                // Log the not found error but proceed with deleting the order.
-                error_log("Domain $domainName not found in PowerDNS, but proceeding with order deletion.");
+            $service = new PlexService($this->di['pdo']);
+
+            $service->deleteDomain([
+                'config' => json_encode([
+                    'domain_name' => $domainName,
+                    'provider'    => $provider,
+                    'apikey'      => $apiKey,
+                ], JSON_UNESCAPED_SLASHES),
+            ]);
+        } catch (\Throwable $e) {
+            $msg = (string)$e->getMessage();
+
+            if (
+                stripos($msg, 'not found') !== false ||
+                stripos($msg, '404') !== false
+            ) {
+                if (isset($this->di['logger'])) {
+                    $this->di['logger']->warning(sprintf(
+                        'DNS delete: domain "%s" not found, continuing. (%s)',
+                        $domainName,
+                        $msg
+                    ));
+                } else {
+                    error_log(sprintf('DNS delete: domain "%s" not found, continuing. (%s)', $domainName, $msg));
+                }
             } else {
-                // For other exceptions, rethrow them as they indicate actual issues.
-                throw new \FOSSBilling\InformationException("Failed to delete domain $domainName: " . $e->getMessage());
+                throw new \FOSSBilling\InformationException(
+                    sprintf('Failed to delete DNS zone "%s": %s', $domainName, $msg),
+                    0,
+                    $e
+                );
             }
         }
 
-        // Proceed with deleting the order from the database.
         if (is_object($model)) {
             $this->di['db']->trash($model);
         }
@@ -195,7 +237,8 @@ class Service implements InjectionAwareInterface
             $orderService = $this->di['mod_service']('order');
             $model = $orderService->getOrderService($order);
         }
-        if (is_null($model)) {
+
+        if (!$model instanceof OODBBean || empty($model->id)) {
             throw new \FOSSBilling\InformationException('Domain does not exist');
         }
 
@@ -206,51 +249,57 @@ class Service implements InjectionAwareInterface
             $client = null;
         }
 
-        if (!is_null($client) && $client->id !== $model->client_id) {
+        if ($client !== null && (int)$client->id !== (int)$model->client_id) {
             throw new \FOSSBilling\InformationException('Domain does not exist');
         }
 
-        $config = json_decode($model->config, true);
-        $rrsetData = [
-            'subname' => $data['record_name'],
-            'type' => $data['record_type'],
-            'ttl' => (int) $data['record_ttl'],
-            'records' => [$data['record_value']]
-        ];
+        $config = json_decode((string)$model->config, true) ?: [];
+        $domainName = $config['domain_name'] ?? null;
+        $provider   = $config['provider'] ?? null;
+        $apiKey     = $config['apikey'] ?? null;
         
-        // Check if the record type is MX
-        if ($data['record_type'] === 'MX') {
-            if ($config['provider'] === 'Desec') {
-                $rrsetData['records'] = [$data['record_priority'] . ' ' . $data['record_value']];
-            } else {
-                $rrsetData['priority'] = $data['record_priority'];
-            }
+        if (empty($domainName)) {
+            throw new \FOSSBilling\InformationException('Domain name is not set.');
+        }
+        if (empty($provider)) {
+            throw new \FOSSBilling\InformationException('DNS provider is not set.');
         }
         
-        $this->chooseDnsProvider($config);
+        $recordName  = (string)($data['record_name'] ?? '');
+        $recordType  = strtoupper((string)($data['record_type'] ?? ''));
+        $recordValue = (string)($data['record_value'] ?? '');
+        $ttl         = isset($data['record_ttl']) ? (int)$data['record_ttl'] : 3600;
+        $priority    = (isset($data['record_priority']) && $data['record_priority'] !== '') ? (int)$data['record_priority'] : null;
 
-        // Check if DNS provider is set
-        if ($this->dnsProvider === null) {
-            throw new \FOSSBilling\InformationException("DNS provider is not set.");
+        if ($recordType === '' || $recordValue === '') {
+            throw new \FOSSBilling\InformationException('Record type and value are required.');
         }
-        
-        $this->dnsProvider->createRRset($config['domain_name'], $rrsetData);
+
+        try {
+            $service = new PlexService($this->di['pdo']);
+
+            $service->addRecord([
+                'domain_name'      => $domainName,
+                'record_name'      => $recordName,
+                'record_type'      => $recordType,
+                'record_value'     => $recordValue,
+                'record_ttl'       => $ttl,
+                'record_priority'  => $priority,
+                'provider'         => $provider,
+                'apikey'           => $apiKey,
+            ]);
+        } catch (\Throwable $e) {
+            throw new \FOSSBilling\InformationException(
+                sprintf(
+                    'Failed to add DNS record for "%s": %s',
+                    $domainName,
+                    $e->getMessage()
+                )
+            );
+        }
 
         $model->updated_at = date('Y-m-d H:i:s');
         $this->di['db']->store($model);
-        
-        $records = $this->di['db']->dispense('service_dns_records');
-        $domainName = isset($order->config) ? json_decode($order->config)->domain_name : null;
-        $domain_id = $this->di['db']->findOne('service_dns', 'domain_name = :domain_name', [':domain_name' => $domainName]);
-        $records->domain_id = $domain_id['id'];
-        $records->type = $data['record_type'];
-        $records->host = $data['record_name'];
-        $records->value = $data['record_value'];
-        $records->ttl = (int) $data['record_ttl'];
-        $records->priority = (isset($data['record_priority']) && $data['record_priority'] !== '') ? $data['record_priority'] : 0;
-        $records->created_at = date('Y-m-d H:i:s');
-        $records->updated_at = date('Y-m-d H:i:s');
-        $this->di['db']->store($records);
 
         return true;
     }
@@ -269,7 +318,8 @@ class Service implements InjectionAwareInterface
             $orderService = $this->di['mod_service']('order');
             $model = $orderService->getOrderService($order);
         }
-        if (is_null($model)) {
+
+        if (!$model instanceof OODBBean || empty($model->id)) {
             throw new \FOSSBilling\InformationException('Domain does not exist');
         }
 
@@ -280,38 +330,82 @@ class Service implements InjectionAwareInterface
             $client = null;
         }
 
-        if (!is_null($client) && $client->id !== $model->client_id) {
+        if ($client !== null && (int)$client->id !== (int)$model->client_id) {
             throw new \FOSSBilling\InformationException('Domain does not exist');
         }
-
-        $config = json_decode($model->config, true);
-        $rrsetData = [
-            'ttl' => (int) $data['record_ttl'],
-            'records' => [$data['record_value']]
-        ];
         
-        // Check if the record type is MX
-        if ($data['record_type'] === 'MX') {
-            if ($config['provider'] === 'Desec') {
-                $rrsetData['records'] = [$data['record_priority'] . ' ' . $data['record_value']];
-            } else {
-                $rrsetData['priority'] = $data['record_priority'];
+        $config = json_decode((string)$model->config, true) ?: [];
+        $domainName = $config['domain_name'] ?? null;
+        $provider   = $config['provider'] ?? null;
+        $apiKey     = $config['apikey'] ?? null;
+        
+        if (empty($domainName)) {
+            throw new \FOSSBilling\InformationException('Domain name is not set.');
+        }
+        if (empty($provider)) {
+            throw new \FOSSBilling\InformationException('DNS provider is not set.');
+        }
+        
+        $recordName  = (string)($data['record_name'] ?? '');
+        $recordType  = strtoupper((string)($data['record_type'] ?? ''));
+        $recordValue = (string)($data['record_value'] ?? '');
+        $oldValue    = (string)($data['old_value'] ?? '');
+        $ttl         = isset($data['record_ttl']) ? (int)$data['record_ttl'] : 3600;
+        $priority    = (isset($data['record_priority']) && $data['record_priority'] !== '') ? (int)$data['record_priority'] : null;
+
+        if ($recordType === '' || $recordValue === '') {
+            throw new \FOSSBilling\InformationException('Record type and value are required.');
+        }
+        
+        try {
+            $service = new PlexService($this->di['pdo']);
+
+            $rec = $this->di['db']->findOne(
+                'service_dns_records',
+                'domain_id = :did AND type = :t AND host = :h AND value = :v',
+                [
+                    ':did' => (int)$model->id,
+                    ':t'   => $recordType,
+                    ':h'   => $recordName,
+                    ':v'   => $oldValue,
+                ]
+            );
+
+            if (!$rec instanceof OODBBean || empty($rec->id)) {
+                throw new \FOSSBilling\InformationException('Record not found. Please refresh and try again.');
             }
+
+            $recordId = $rec->recordId
+                ?? $rec->recordid
+                ?? ($rec->export()['recordId'] ?? null)
+                ?? ($rec->export()['recordid'] ?? null);
+            if (empty($recordId)) {
+                throw new \FOSSBilling\InformationException('This record is missing provider recordId. Please delete and re-create it.');
+            }
+
+            $recordId = $service->updateRecord([
+                'domain_name'      => $domainName,
+                'record_id'        => $recordId,
+                'record_name'      => $recordName,
+                'record_type'      => $recordType,
+                'record_value'     => $recordValue,
+                'record_ttl'       => $ttl,
+                'record_priority'  => $priority,
+                'provider'         => $provider,
+                'apikey'           => $apiKey,
+            ]);
+        } catch (\Throwable $e) {
+            throw new \FOSSBilling\InformationException(
+                sprintf(
+                    'Failed to modify DNS record for "%s": %s',
+                    $domainName,
+                    $e->getMessage()
+                )
+            );
         }
 
-        $this->chooseDnsProvider($config);
-
-        // Check if DNS provider is set
-        if ($this->dnsProvider === null) {
-            throw new \FOSSBilling\InformationException("DNS provider is not set.");
-        }
-
-        $this->dnsProvider->modifyRRset($config['domain_name'], $data['record_name'], $data['record_type'], $rrsetData);
-
-        $domainName = isset($order->config) ? json_decode($order->config)->domain_name : null;
-        $domain_id = $this->di['db']->findOne('service_dns', 'domain_name = :domain_name', [':domain_name' => $domainName]);     
-
-        $this->di['db']->exec( 'UPDATE service_dns_records SET ttl=?, value = ?, updated_at = ? WHERE id = ? AND domain_id = ?' , [$data['record_ttl'], $data['record_value'], date('Y-m-d H:i:s'), $data['record_id'], $domain_id['id']] );
+        $model->updated_at = date('Y-m-d H:i:s');
+        $this->di['db']->store($model);
 
         return true;
     }
@@ -330,7 +424,8 @@ class Service implements InjectionAwareInterface
             $orderService = $this->di['mod_service']('order');
             $model = $orderService->getOrderService($order);
         }
-        if (is_null($model)) {
+
+        if (!$model instanceof OODBBean || empty($model->id)) {
             throw new \FOSSBilling\InformationException('Domain does not exist');
         }
 
@@ -341,34 +436,76 @@ class Service implements InjectionAwareInterface
             $client = null;
         }
 
-        if (!is_null($client) && $client->id !== $model->client_id) {
+        if ($client !== null && (int)$client->id !== (int)$model->client_id) {
             throw new \FOSSBilling\InformationException('Domain does not exist');
         }
+        
+        $config = json_decode((string)$model->config, true) ?: [];
+        $domainName = $config['domain_name'] ?? null;
+        $provider   = $config['provider'] ?? null;
+        $apiKey     = $config['apikey'] ?? null;
+        
+        if (empty($domainName)) {
+            throw new \FOSSBilling\InformationException('Domain name is not set.');
+        }
+        if (empty($provider)) {
+            throw new \FOSSBilling\InformationException('DNS provider is not set.');
+        }
+        
+        $recordName  = (string)($data['record_name'] ?? '');
+        $recordType  = strtoupper((string)($data['record_type'] ?? ''));
+        $recordValue = (string)($data['record_value'] ?? '');
+        $ttl         = isset($data['record_ttl']) ? (int)$data['record_ttl'] : 3600;
+        $priority    = (isset($data['record_priority']) && $data['record_priority'] !== '') ? (int)$data['record_priority'] : null;
 
-        $config = json_decode($model->config, true);
-        $this->chooseDnsProvider($config);
-
-        // Check if DNS provider is set
-        if ($this->dnsProvider === null) {
-            throw new \FOSSBilling\InformationException("DNS provider is not set.");
+        if ($recordType === '' || $recordValue === '') {
+            throw new \FOSSBilling\InformationException('Record type and value are required.');
         }
 
-        if ($data['record_type'] === 'MX') { 
-            $data['record_value'] = $data['record_priority'] . ' ' . $data['record_value'];
+        try {
+            $service = new PlexService($this->di['pdo']);
+
+            $rec = $this->di['db']->findOne(
+                'service_dns_records',
+                'domain_id = :did AND type = :t AND host = :h AND value = :v',
+                [
+                    ':did' => (int)$model->id,
+                    ':t'   => $recordType,
+                    ':h'   => $recordName,
+                    ':v'   => $recordValue,
+                ]
+            );
+
+            if (!$rec instanceof OODBBean || empty($rec->id)) {
+                throw new \FOSSBilling\InformationException('Record not found. Please refresh and try again.');
+            }
+
+            $recordId = $rec->recordId
+                ?? $rec->recordid
+                ?? ($rec->export()['recordId'] ?? null)
+                ?? ($rec->export()['recordid'] ?? null);
+            if (empty($recordId)) {
+                throw new \FOSSBilling\InformationException('This record is missing provider recordId. Please delete and re-create it.');
+            }
+
+            $recordId = $service->delRecord([
+                'domain_name'      => $domainName,
+                'record_id'        => $recordId,
+                'record_name'      => $recordName,
+                'record_type'      => $recordType,
+                'record_value'     => $recordValue,
+                'provider'         => $provider,
+                'apikey'           => $apiKey,
+            ]);
+        } catch (\Throwable $e) {
+            throw new \FOSSBilling\InformationException(
+                sprintf(
+                    'Failed to delete DNS record for "%s": %s',
+                    $domainName,
+                    $e->getMessage()
+                )
+            );
         }
-
-        $this->dnsProvider->deleteRRset($config['domain_name'], $data['record_name'], $data['record_type'], $data['record_value']);
-
-        $model->updated_at = date('Y-m-d H:i:s');
-        $this->di['db']->store($model);
-
-        $domainName = isset($order->config) ? json_decode($order->config)->domain_name : null;
-        $domain_id = $this->di['db']->findOne('service_dns', 'domain_name = :domain_name', [':domain_name' => $domainName]);     
-
-        $this->di['db']->exec(
-            'DELETE FROM service_dns_records WHERE id = ? AND domain_id = ?', 
-            [$data['record_id'], $domain_id['id']]
-        );
 
         return true;
     }
@@ -380,30 +517,31 @@ class Service implements InjectionAwareInterface
     {
         $sql = '
         CREATE TABLE IF NOT EXISTS `service_dns` (
-            `id` bigint(20) NOT NULL AUTO_INCREMENT UNIQUE,
-            `client_id` bigint(20) NOT NULL,
-            `domain_name` varchar(75),
-            `provider_id` varchar(11),
-            `zoneId` varchar(100) DEFAULT NULL,
-            `config` text NOT NULL,
-            `created_at` datetime,
-            `updated_at` datetime,
-            PRIMARY KEY (`id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
+            `id` BIGINT(20) NOT NULL AUTO_INCREMENT,
+            `client_id` BIGINT(20) NOT NULL,
+            `domain_name` VARCHAR(75),
+            `provider_id` VARCHAR(11),
+            `zoneId` VARCHAR(100) DEFAULT NULL,
+            `config` TEXT NOT NULL,
+            `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uniq_domain_name` (`domain_name`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         CREATE TABLE IF NOT EXISTS `service_dns_records` (
-            `id` bigint(20) NOT NULL AUTO_INCREMENT,
-            `domain_id` bigint(20) NOT NULL,
-            `recordId` varchar(100) DEFAULT NULL,
-            `type` varchar(10) NOT NULL,
-            `host` varchar(255) NOT NULL,
-            `value` text NOT NULL,
-            `ttl` int(11) DEFAULT NULL,
-            `priority` int(11) DEFAULT NULL,
-            `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
-            `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `id` BIGINT(20) NOT NULL AUTO_INCREMENT,
+            `domain_id` BIGINT(20) NOT NULL,
+            `recordId` VARCHAR(100) DEFAULT NULL,
+            `type` VARCHAR(10) NOT NULL,
+            `host` VARCHAR(255) NOT NULL,
+            `value` TEXT NOT NULL,
+            `ttl` INT(11) DEFAULT NULL,
+            `priority` INT(11) DEFAULT NULL,
+            `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`),
             FOREIGN KEY (`domain_id`) REFERENCES `service_dns`(`id`) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;';
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;';
         $this->di['db']->exec($sql);
 
         return true;

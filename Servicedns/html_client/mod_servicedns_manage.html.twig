@@ -59,6 +59,7 @@
                         <input type="hidden" name="record_id" value="{{ record.id }}"/>
                         <input type="hidden" name="record_type" value="{{ record.type }}"/>
                         <input type="hidden" name="record_name" value="{{ record.host }}"/>
+                        <input type="hidden" name="old_value" value="{{ record.value }}"/>
                         <input type="hidden" name="order_id" value="{{ order.id }}">
                             <tr>
                                 <td>{% set dns_type = record.type|upper %}
