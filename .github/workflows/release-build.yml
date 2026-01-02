@@ -24,7 +24,7 @@ jobs:
       - name: Composer require (no-dev)
         working-directory: Servicedns
         run: |
-          composer require namingo/plexdns --no-dev --no-interaction --no-progress --optimize-autoloader
+          composer require namingo/plexdns --no-interaction --no-progress
 
       # Adjust MODULE_DIR to match what you want inside the archive
       # Example: if your repo root IS the module folder, keep "."
