@@ -26,16 +26,13 @@ jobs:
         run: |
           composer require namingo/plexdns --no-interaction --no-progress
 
-      # Adjust MODULE_DIR to match what you want inside the archive
-      # Example: if your repo root IS the module folder, keep "."
-      # If your repo contains WHMCS tree, set this to "modules/registrars/epp"
       - name: Build archives
         env:
           MODULE_DIR: "."
         run: |
           set -euxo pipefail
           TAG="${{ github.event.release.tag_name }}"
-          NAME="whmcs-epp-${TAG}"
+          NAME="fossbilling-dns-${TAG}"
 
           mkdir -p dist
           rsync -a --delete \

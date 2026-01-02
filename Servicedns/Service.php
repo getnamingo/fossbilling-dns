@@ -1,11 +1,13 @@
 <?php
 /**
- * Copyright 2022-2023 FOSSBilling
- * Copyright 2011-2021 BoxBilling, Inc.
- * SPDX-License-Identifier: Apache-2.0.
+ * FOSSBilling-DNS module
  *
- * @copyright FOSSBilling (https://www.fossbilling.org)
- * @license http://www.apache.org/licenses/LICENSE-2.0 Apache-2.0
+ * Written in 2024–2025 by Taras Kondratyuk (https://namingo.org)
+ * Based on example modules and inspired by existing modules of FOSSBilling
+ * (https://www.fossbilling.org) and BoxBilling.
+ *
+ * @license Apache-2.0
+ * @see https://www.apache.org/licenses/LICENSE-2.0
  */
 
 namespace Box\Mod\Servicedns;
@@ -13,7 +15,9 @@ namespace Box\Mod\Servicedns;
 define('PLEX_TABLE_ZONES', 'service_dns');
 define('PLEX_TABLE_RECORDS', 'service_dns_records');
 
-require_once __DIR__ . '/vendor/autoload.php';
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+}
 
 use FOSSBilling\InjectionAwareInterface;
 use RedBeanPHP\OODBBean;
@@ -33,32 +37,10 @@ class Service implements InjectionAwareInterface
     {
         return $this->di;
     }
-    
-    private function chooseDnsProvider($config) {
-        $providerName = $config['provider'];
 
-        switch ($providerName) {
-            case 'Bind':
-                $this->dnsProvider = new Providers\Bind($config);
-                break;
-            case 'Desec':
-                $this->dnsProvider = new Providers\Desec($config);
-                break;
-            case 'DNSimple':
-                $this->dnsProvider = new Providers\DNSimple($config);
-                break;
-            case 'Hetzner':
-                $this->dnsProvider = new Providers\Hetzner($config);
-                break;
-            case 'PowerDNS':
-                $this->dnsProvider = new Providers\PowerDNS($config);
-                break;
-            case 'Vultr':
-                $this->dnsProvider = new Providers\Vultr($config);
-                break;
-            default:
-                throw new \FOSSBilling\InformationException("Unknown DNS provider: {$providerName}");
-        }
+    public function getCartProductTitle($product, array $data)
+    {
+        return __trans('DNS Hosting for :domain', [':domain' => $data['domain_name']]);
     }
 
     public function attachOrderConfig(\Model_Product $product, array $data): array
