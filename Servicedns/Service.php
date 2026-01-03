@@ -26,7 +26,6 @@ use PlexDNS\Service as PlexService;
 class Service implements InjectionAwareInterface
 {
     protected ?\Pimple\Container $di = null;
-    private $dnsProvider;
 
     public function setDi(\Pimple\Container $di): void
     {
@@ -550,56 +549,4 @@ class Service implements InjectionAwareInterface
         return $order->status === 'active';
     }
 
-    /*public static function onBeforeAdminCronRun(\Box_Event $event): void
-    {
-        $di = $event->getDi();
-        
-        // Check if the module 'servicedns' is activated
-        $sqlCheck = 'SELECT COUNT(*) FROM extension WHERE name = :name AND status = :status';
-        $stmtCheck = $di['pdo']->prepare($sqlCheck);
-        $stmtCheck->bindValue(':name', 'servicedns');
-        $stmtCheck->bindValue(':status', 'installed');
-        $stmtCheck->execute();
-        $count = $stmtCheck->fetchColumn();
-
-        if ($count > 0) {
-            $sqlFetchProduct = 'SELECT config FROM product WHERE title = :title LIMIT 1';
-            $stmtFetchProduct = $di['pdo']->prepare($sqlFetchProduct);
-            $stmtFetchProduct->bindValue(':title', 'DNS hosting');
-            $stmtFetchProduct->execute();
-            $productRow = $stmtFetchProduct->fetch(\PDO::FETCH_ASSOC);
-
-            if ($productRow) {
-                $configuJson = $productRow['config'];
-                $configArray = json_decode($configuJson, true);
-
-                $service = $di['mod_service']('servicedns');
-                $service->chooseDnsProvider($configArray);
-
-                if ($service->dnsProvider === null) {
-                    throw new \FOSSBilling\InformationException("DNS provider is not set.");
-                }
-
-                $sqlFetchDomains = 'SELECT * FROM service_dns';
-                $stmtFetchDomains = $di['pdo']->prepare($sqlFetchDomains);
-                $stmtFetchDomains->execute();
-                $rows = $stmtFetchDomains->fetchAll(\PDO::FETCH_ASSOC);
-
-                foreach ($rows as $row) {
-                    $domainName = $row['domain_name'];
-
-                    try {
-                        // Assuming getDomain is the method you want to call
-                        //$result = $service->dnsProvider->getDomain($domainName);
-                        // Do something with $result if needed
-                    } catch (\Exception $e) {
-                        // Handle any exceptions during domain processing
-                        echo "Failed to process domain '{$domainName}': " . $e->getMessage() . "\n";
-                    }
-                }
-            } else {
-                throw new \FOSSBilling\InformationException("Product with title 'DNS hosting' not found.");
-            }
-        }
-    }*/
 }

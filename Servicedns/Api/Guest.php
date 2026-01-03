@@ -1,11 +1,13 @@
 <?php
 /**
- * Copyright 2022-2023 FOSSBilling
- * Copyright 2011-2021 BoxBilling, Inc.
- * SPDX-License-Identifier: Apache-2.0.
+ * FOSSBilling-DNS module
  *
- * @copyright FOSSBilling (https://www.fossbilling.org)
- * @license http://www.apache.org/licenses/LICENSE-2.0 Apache-2.0
+ * Written in 2024–2025 by Taras Kondratyuk (https://namingo.org)
+ * Based on example modules and inspired by existing modules of FOSSBilling
+ * (https://www.fossbilling.org) and BoxBilling.
+ *
+ * @license Apache-2.0
+ * @see https://www.apache.org/licenses/LICENSE-2.0
  */
 
 namespace Box\Mod\Servicedns\Api;

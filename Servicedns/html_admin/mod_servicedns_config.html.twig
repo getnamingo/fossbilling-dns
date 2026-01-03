@@ -9,7 +9,10 @@
                 <div class="col">
                     <select class="form-select" name="config[provider]" required>
                         <option value="" disabled {% if not product.config.provider %}selected{% endif %}>Select Provider</option>
+                        <option value="AnycastDNS" {% if product.config.provider == 'AnycastDNS' %}selected{% endif %}>AnycastDNS</option>
                         <option value="Bind" {% if product.config.provider == 'Bind' %}selected{% endif %}>Bind</option>
+                        <option value="Cloudflare" {% if product.config.provider == 'Cloudflare' %}selected{% endif %}>Cloudflare</option>
+                        <option value="ClouDNS" {% if product.config.provider == 'ClouDNS' %}selected{% endif %}>ClouDNS</option>
                         <option value="Desec" {% if product.config.provider == 'Desec' %}selected{% endif %}>Desec</option>
                         <option value="DNSimple" {% if product.config.provider == 'DNSimple' %}selected{% endif %}>DNSimple</option>
                         <option value="Hetzner" {% if product.config.provider == 'Hetzner' %}selected{% endif %}>Hetzner</option>

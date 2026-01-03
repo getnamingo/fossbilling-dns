@@ -1,15 +1,17 @@
 <div class="d-flex mb-3">
-<input class="form-control" type="text" name="domain_name" placeholder="example.com" placeholder="{{ 'Enter your domain name to transfer'|trans }}">								  
+<input class="form-control" type="text" name="domain_name" placeholder="example.com">                                  
 </div>
 <div class="card text-white bg-info mb-3">
-  <div class="card-header">DNS Hosting Setup</div>
+  <div class="card-header"><h5 class="card-title">Nameserver Setup</h5></div>
   <div class="card-body">
-    <h5 class="card-title">Important Instructions</h5>
-    <p class="card-text">In order for the DNS hosting to work, please point your domain to our DNS servers:</p>
+    <p class="card-text">Please update your domain’s nameserver settings at your domain registrar to the following:</p>
     <ul>
-      <li>ns1.example.com</li>
-      <li>ns2.example.com</li>
-      <li>ns3.example.com</li>
+      {% for i in 1..5 %}
+        {% set key = 'ns' ~ i %}
+        {% if product.config[key] is defined and product.config[key] %}
+          <li>{{ product.config[key] }}</li>
+        {% endif %}
+      {% endfor %}
     </ul>
   </div>
 </div>

@@ -58,6 +58,7 @@
                         <input type="hidden" name="record_id" value="{{ record.id }}"/>
                         <input type="hidden" name="record_type" value="{{ record.type }}"/>
                         <input type="hidden" name="record_name" value="{{ record.host }}"/>
+                        <input type="hidden" name="old_value" value="{{ record.value }}"/>
                         <input type="hidden" name="order_id" value="{{ order.id }}">
                             <tr>
                                 <td>{% set dns_type = record.type|upper %}
@@ -74,7 +75,7 @@
                                 <td><strong>{{ record.host }}</strong></td>
                                 <td><input type="text" class="form-control" placeholder="127.0.0.1" name="record_value" value="{{ record.value }}" style="min-width:200px;" required></td>
                                 <td><input type="text" class="form-control" placeholder="600" name="record_ttl" value="{{ record.ttl }}" style="min-width:100px;" required></td>
-                                <td>{% if record.type == 'MX' %}<span class="badge bg-dark-lt">{{ record.priority }}</span>{% endif %}</td>
+                                <td> {% if record.type == 'MX' %} <span class="badge bg-dark-lt">{{ record.priority }}</span> <input type="hidden" name="record_priority" value="{{ record.priority }}"> {% endif %} </td>
                                 <td>
                                     <button type="submit" class="btn btn-outline-primary btn-icon" name="action" value="update" title="Update Record">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" /><path d="M16 5l3 3" /></svg>
