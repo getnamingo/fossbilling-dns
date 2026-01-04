@@ -45,3 +45,27 @@ Within FOSSBilling, go to **Extensions -> Overview** and activate the `DNS Hosti
 Then go to **Products -> Products & Services -> New product** and create a new product of type `Dns`.
 
 Configure your product, and do not forget to select your DNS hosting provider and input the API key on the `Configuration` tab of your product.
+
+## Support
+
+Your feedback and inquiries are invaluable to Namingo's evolutionary journey. If you need support, have questions, or want to contribute your thoughts:
+
+- **Email**: Feel free to reach out directly at [help@namingo.org](mailto:help@namingo.org).
+
+- **Discord**: Or chat with us on our [Discord](https://discord.gg/97R9VCrWgc) channel.
+  
+- **GitHub Issues**: For bug reports or feature requests, please use the [Issues](https://github.com/getnamingo/fossbilling-dns/issues) section of our GitHub repository.
+
+We appreciate your involvement and patience as Namingo continues to grow and adapt.
+
+## 💖 Support This Project
+
+If you find DNS hosting module for FOSSBilling useful, consider donating:
+
+- [Donate via Stripe](https://donate.stripe.com/7sI2aI4jV3Offn28ww)
+- BTC: `bc1q9jhxjlnzv0x4wzxfp8xzc6w289ewggtds54uqa`
+- ETH: `0x330c1b148368EE4B8756B176f1766d52132f0Ea8`
+
+## Licensing
+
+DNS hosting module for FOSSBilling is licensed under the Apache-2.0 license.
