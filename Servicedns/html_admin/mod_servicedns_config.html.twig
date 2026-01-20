@@ -39,10 +39,17 @@
                 </div>
             </div>
             <div class="mb-3 row">
-                <p>{{ 'Enter the IP address of your BIND/PowerDNS server where the API is accessible.'|trans }}</p>
-                <label class="form-label col-3 col-form-label">{{ 'BIND/PowerDNS API IP'|trans }}:</label>
+                <p>{{ 'Enter the IP address of your BIND server where the API is accessible.'|trans }}</p>
+                <label class="form-label col-3 col-form-label">{{ 'BIND API IP'|trans }}:</label>
                 <div class="col">
-                    <input type="text" class="form-control" name="config[powerdnsapi]" placeholder="127.0.0.1" value="{{ product.config.powerdnsapi }}">
+                    <input type="text" class="form-control" name="config[bindip]" placeholder="127.0.0.1" value="{{ product.config.bindip }}">
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <p>{{ 'Enter the IP address of your PowerDNS server where the API is accessible.'|trans }}</p>
+                <label class="form-label col-3 col-form-label">{{ 'PowerDNS API IP'|trans }}:</label>
+                <div class="col">
+                    <input type="text" class="form-control" name="config[powerdnsip]" placeholder="127.0.0.1" value="{{ product.config.powerdnsip }}">
                 </div>
             </div>
             <div class="mb-3 row">
