@@ -177,9 +177,11 @@ class Service implements InjectionAwareInterface
                 }
             } else {
                 throw new \FOSSBilling\InformationException(
-                    sprintf('Failed to delete DNS zone "%s": %s', $domainName, $msg),
-                    0,
-                    $e
+                    sprintf(
+                        'Failed to delete DNS zone "%s": %s',
+                        $domainName,
+                        $msg
+                    )
                 );
             }
         }
