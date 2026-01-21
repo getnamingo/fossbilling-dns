@@ -88,13 +88,29 @@ class Service implements InjectionAwareInterface
 
         $service = new PlexService($this->di['pdo']);
 
+        $cfg = [
+            'domain_name' => $domainName,
+            'provider'    => $provider,
+            'apikey'      => $apikey,
+        ];
+
+        if ($provider === 'PowerDNS') {
+            $cfg['powerdnsip'] = $config['powerdnsip'] ?? null;
+            for ($i = 1; $i <= 13; $i++) {
+                $k = 'ns' . $i;
+                if (!empty($config[$k])) $cfg[$k] = $config[$k];
+            }
+        } elseif ($provider === 'Bind') {
+            $cfg['bindip'] = $config['bindip'] ?? null;
+            for ($i = 1; $i <= 13; $i++) {
+                $k = 'ns' . $i;
+                if (!empty($config[$k])) $cfg[$k] = $config[$k];
+            }
+        }
+
         $domainOrder = [
             'client_id' => $order->client_id,
-            'config'    => json_encode([
-                'domain_name' => $domainName,
-                'provider'    => $provider,
-                'apikey'      => $apikey,
-            ]),
+            'config'    => json_encode($cfg, JSON_UNESCAPED_SLASHES),
         ];
 
         $domain = $service->createDomain($domainOrder);
@@ -152,12 +168,31 @@ class Service implements InjectionAwareInterface
         try {
             $service = new PlexService($this->di['pdo']);
 
+            $cfg = [
+                'domain_name' => $domainName,
+                'provider'    => $provider,
+                'apikey'      => $apiKey,
+            ];
+
+            if ($provider === 'PowerDNS') {
+                $cfg['powerdnsip'] = $config['powerdnsip'] ?? null;
+            }
+
+            if ($provider === 'Bind') {
+                $cfg['bindip'] = $config['bindip'] ?? null;
+            }
+
+            if ($provider === 'PowerDNS' || $provider === 'Bind') {
+                for ($i = 1; $i <= 13; $i++) {
+                    $k = 'ns' . $i;
+                    if (!empty($config[$k])) {
+                        $cfg[$k] = $config[$k];
+                    }
+                }
+            }
+
             $service->deleteDomain([
-                'config' => json_encode([
-                    'domain_name' => $domainName,
-                    'provider'    => $provider,
-                    'apikey'      => $apiKey,
-                ], JSON_UNESCAPED_SLASHES),
+                'config' => json_encode($cfg, JSON_UNESCAPED_SLASHES),
             ]);
         } catch (\Throwable $e) {
             $msg = (string)$e->getMessage();
@@ -261,16 +296,35 @@ class Service implements InjectionAwareInterface
         try {
             $service = new PlexService($this->di['pdo']);
 
-            $service->addRecord([
-                'domain_name'      => $domainName,
-                'record_name'      => $recordName,
-                'record_type'      => $recordType,
-                'record_value'     => $recordValue,
-                'record_ttl'       => $ttl,
-                'record_priority'  => $priority,
-                'provider'         => $provider,
-                'apikey'           => $apiKey,
-            ]);
+            $req = [
+                'domain_name'     => $domainName,
+                'record_name'     => $recordName,
+                'record_type'     => $recordType,
+                'record_value'    => $recordValue,
+                'record_ttl'      => $ttl,
+                'record_priority' => $priority,
+                'provider'        => $provider,
+                'apikey'          => $apiKey,
+            ];
+
+            if ($provider === 'PowerDNS') {
+                $req['powerdnsip'] = $config['powerdnsip'] ?? null;
+            }
+
+            if ($provider === 'Bind') {
+                $req['bindip'] = $config['bindip'] ?? null;
+            }
+
+            if ($provider === 'PowerDNS' || $provider === 'Bind') {
+                for ($i = 1; $i <= 13; $i++) {
+                    $k = 'ns' . $i;
+                    if (!empty($config[$k])) {
+                        $req[$k] = $config[$k];
+                    }
+                }
+            }
+
+            $service->addRecord($req);
         } catch (\Throwable $e) {
             throw new \FOSSBilling\InformationException(
                 sprintf(
@@ -366,17 +420,36 @@ class Service implements InjectionAwareInterface
                 throw new \FOSSBilling\InformationException('This record is missing provider recordId. Please delete and re-create it.');
             }
 
-            $recordId = $service->updateRecord([
-                'domain_name'      => $domainName,
-                'record_id'        => $recordId,
-                'record_name'      => $recordName,
-                'record_type'      => $recordType,
-                'record_value'     => $recordValue,
-                'record_ttl'       => $ttl,
-                'record_priority'  => $priority,
-                'provider'         => $provider,
-                'apikey'           => $apiKey,
-            ]);
+            $req = [
+                'domain_name'     => $domainName,
+                'record_id'       => $recordId,
+                'record_name'     => $recordName,
+                'record_type'     => $recordType,
+                'record_value'    => $recordValue,
+                'record_ttl'      => $ttl,
+                'record_priority' => $priority,
+                'provider'        => $provider,
+                'apikey'          => $apiKey,
+            ];
+
+            if ($provider === 'PowerDNS') {
+                $req['powerdnsip'] = $config['powerdnsip'] ?? null;
+            }
+
+            if ($provider === 'Bind') {
+                $req['bindip'] = $config['bindip'] ?? null;
+            }
+
+            if ($provider === 'PowerDNS' || $provider === 'Bind') {
+                for ($i = 1; $i <= 13; $i++) {
+                    $k = 'ns' . $i;
+                    if (!empty($config[$k])) {
+                        $req[$k] = $config[$k];
+                    }
+                }
+            }
+
+            $recordId = $service->updateRecord($req);
         } catch (\Throwable $e) {
             throw new \FOSSBilling\InformationException(
                 sprintf(
@@ -471,15 +544,34 @@ class Service implements InjectionAwareInterface
                 throw new \FOSSBilling\InformationException('This record is missing provider recordId. Please delete and re-create it.');
             }
 
-            $recordId = $service->delRecord([
-                'domain_name'      => $domainName,
-                'record_id'        => $recordId,
-                'record_name'      => $recordName,
-                'record_type'      => $recordType,
-                'record_value'     => $recordValue,
-                'provider'         => $provider,
-                'apikey'           => $apiKey,
-            ]);
+            $req = [
+                'domain_name'   => $domainName,
+                'record_id'     => $recordId,
+                'record_name'   => $recordName,
+                'record_type'   => $recordType,
+                'record_value'  => $recordValue,
+                'provider'      => $provider,
+                'apikey'        => $apiKey,
+            ];
+
+            if ($provider === 'PowerDNS') {
+                $req['powerdnsip'] = $config['powerdnsip'] ?? null;
+            }
+
+            if ($provider === 'Bind') {
+                $req['bindip'] = $config['bindip'] ?? null;
+            }
+
+            if ($provider === 'PowerDNS' || $provider === 'Bind') {
+                for ($i = 1; $i <= 13; $i++) {
+                    $k = 'ns' . $i;
+                    if (!empty($config[$k])) {
+                        $req[$k] = $config[$k];
+                    }
+                }
+            }
+
+            $recordId = $service->delRecord($req);
         } catch (\Throwable $e) {
             throw new \FOSSBilling\InformationException(
                 sprintf(

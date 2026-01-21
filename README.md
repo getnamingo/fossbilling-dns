@@ -47,6 +47,32 @@ Then go to **Products -> Products & Services -> New product** and create a new p
 
 Configure your product, and do not forget to select your DNS hosting provider and input the API key on the `Configuration` tab of your product.
 
+## FOSSBilling Module Update instructions
+
+To update the DNS hosting module to the latest version, download the newest release and replace the existing module files.
+
+### Manual update
+
+1. Download the **latest release** archive from the repository.
+2. Extract the archive to a temporary directory.
+3. Locate the `Servicedns` directory inside the extracted release.
+4. Copy the `Servicedns` directory into `[FOSSBilling]/modules/`, **overwriting** the existing `Servicedns` directory.
+5. Clear FOSSBilling cache if applicable and reload the admin panel.
+
+### Update via console
+
+From your server:
+
+```bash
+cd /tmp
+wget https://github.com/getnamingo/fossbilling-dns/releases/download/v1.1.1/fossbilling-dns-v1.1.1.tar.gz
+tar xzf fossbilling-dns-v1.1.1.tar.gz
+cd fossbilling-dns-v1.1.1
+mv Servicedns /path/to/FOSSBilling/modules/Servicedns
+```
+
+After updating, log in to the FOSSBilling admin panel and verify that the module version is updated under Extensions -> Overview.
+
 ## Support
 
 Your feedback and inquiries are invaluable to Namingo's evolutionary journey. If you need support, have questions, or want to contribute your thoughts:
