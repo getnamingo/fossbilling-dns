@@ -6,7 +6,7 @@
     <div class="card-body">
         <h3>{{ 'DNS Record Management'|trans }}</h3>
 
-        <form class="mb-4 api-form" method="post" action="{{ 'api/client/servicedns/add'|link }}" data-api-msg="{{ 'New record added'|trans }}" onsubmit="setTimeout(function(){ window.location.reload(); }, 800);">
+        <form class="mb-4 api-form" method="post" action="{{ 'api/client/servicedns/add'|link }}" data-api-msg="{{ 'New record added'|trans }}">
           <input type="hidden" name="CSRFToken" value="{{ CSRFToken }}"/>
             <div class="row g-3">
                 <div class="col-md-2">
@@ -28,7 +28,7 @@
                     <input type="text" class="form-control" placeholder="127.0.0.1" name="record_value" required>
                 </div>
                 <div class="col-sm">
-                    <input type="number" class="form-control" placeholder="TTL" name="record_ttl" value="600" required>
+                    <input type="number" class="form-control" placeholder="TTL" name="record_ttl" value="3600" required>
                 </div>
                 <div class="col-sm">
                     <input type="number" class="form-control" placeholder="Priority" name="record_priority">
