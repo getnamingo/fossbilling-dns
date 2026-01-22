@@ -101,25 +101,29 @@
 </div>
 
 <script> 
-    function confirmDelete(form) {
-        event.preventDefault();
+function confirmDelete(form) {
+    event.preventDefault();
 
-        if (confirm("Are you sure you want to delete this record?")) {
-            // Fetch API to send the form data
-            fetch("{{ 'api/client/servicedns/del'|link }}", {
-                method: 'POST',
-                body: new FormData(form), // Sends the form data
-                headers: {
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log(data); // Handle the response data
-                // Optionally reload the page
-                window.location.reload();
-            })
-            .catch(error => console.error('Error:', error));
-        }
+    if (confirm("Are you sure you want to delete this record?")) {
+        fetch("{{ 'api/client/servicedns/del'|link }}", {
+            method: 'POST',
+            body: new FormData(form),
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            window.location.reload();
+        })
+        .catch(error => console.error('Error:', error));
     }
+}
+
+document.addEventListener('hidden.bs.toast', function (event) {
+    const toast = event.target;
+    if (toast.classList.contains('toast')) {
+        window.location.reload();
+    }
+});
 </script>

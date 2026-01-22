@@ -117,5 +117,12 @@ function confirmDelete(form) {
         .catch(error => console.error('Error:', error));
     }
 }
+
+document.addEventListener('hidden.bs.toast', function (event) {
+    const toast = event.target;
+    if (toast.classList.contains('toast')) {
+        window.location.reload();
+    }
+});
 </script>
 {% endif %}
