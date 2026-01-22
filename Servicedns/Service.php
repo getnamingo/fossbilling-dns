@@ -293,6 +293,21 @@ class Service implements InjectionAwareInterface
             throw new \FOSSBilling\InformationException('Record type and value are required.');
         }
 
+        if ($recordType === 'MX' && $priority === null) {
+            $priority = 0;
+        }
+
+        if ($recordType === 'TXT') {
+            $v = trim($recordValue);
+            if ($v === '' || $v[0] !== '"' || substr($v, -1) !== '"') {
+                $recordValue = '"' . str_replace('"', '\"', $v) . '"';
+            }
+        }
+
+        if (in_array($provider, ['PowerDNS'], true) && $recordType === 'CNAME') {
+            $recordValue = rtrim(trim($recordValue), '.') . '.';
+        }
+
         try {
             $service = new PlexService($this->di['pdo']);
 
@@ -393,7 +408,22 @@ class Service implements InjectionAwareInterface
         if ($recordType === '' || $recordValue === '') {
             throw new \FOSSBilling\InformationException('Record type and value are required.');
         }
-        
+
+        if ($recordType === 'MX' && $priority === null) {
+            $priority = 0;
+        }
+
+        if ($recordType === 'TXT') {
+            $v = trim($recordValue);
+            if ($v === '' || $v[0] !== '"' || substr($v, -1) !== '"') {
+                $recordValue = '"' . str_replace('"', '\"', $v) . '"';
+            }
+        }
+
+        if (in_array($provider, ['PowerDNS'], true) && $recordType === 'CNAME') {
+            $recordValue = rtrim(trim($recordValue), '.') . '.';
+        }
+
         try {
             $service = new PlexService($this->di['pdo']);
 
