@@ -65,9 +65,9 @@ From your server:
 
 ```bash
 cd /tmp
-wget https://github.com/getnamingo/fossbilling-dns/releases/download/v1.1.1/fossbilling-dns-v1.1.1.tar.gz
-tar xzf fossbilling-dns-v1.1.1.tar.gz
-cd fossbilling-dns-v1.1.1
+wget https://github.com/getnamingo/fossbilling-dns/releases/download/v1.1.2/fossbilling-dns-v1.1.2.tar.gz
+tar xzf fossbilling-dns-v1.1.2.tar.gz
+cd fossbilling-dns-v1.1.2
 mv Servicedns /path/to/FOSSBilling/modules/Servicedns
 ```
 
