@@ -2,7 +2,7 @@
 /**
  * FOSSBilling-DNS module
  *
- * Written in 2024–2025 by Taras Kondratyuk (https://namingo.org)
+ * Written in 2024–2026 by Taras Kondratyuk (https://namingo.org)
  * Based on example modules and inspired by existing modules of FOSSBilling
  * (https://www.fossbilling.org) and BoxBilling.
  *

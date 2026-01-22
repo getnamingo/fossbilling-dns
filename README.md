@@ -85,7 +85,7 @@ Your feedback and inquiries are invaluable to Namingo's evolutionary journey. If
 
 We appreciate your involvement and patience as Namingo continues to grow and adapt.
 
-## 💖 Support This Project
+## Support This Project
 
 If you find DNS hosting module for FOSSBilling useful, consider donating:
 
