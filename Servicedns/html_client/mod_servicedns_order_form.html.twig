@@ -1,6 +1,22 @@
-<div class="d-flex mb-3">
-<input class="form-control" type="text" name="domain_name" placeholder="example.com">                                  
+{{ product_details }}
+
+<div class="mb-3">
+  <label class="form-label" for="domain_name">{{ 'Domain name'|trans }}</label>
+  <input
+    class="form-control"
+    type="text"
+    id="domain_name"
+    name="domain_name"
+    placeholder="example.com"
+    required
+    autocomplete="off"
+    autocapitalize="off"
+  >
+  <div class="form-hint">
+    {{ 'Enter the domain you want to manage DNS for. Example: example.com'|trans }}
+  </div>
 </div>
+
 <div class="card text-white bg-info mb-3">
   <div class="card-header"><h5 class="card-title">Nameserver Setup</h5></div>
   <div class="card-body">
