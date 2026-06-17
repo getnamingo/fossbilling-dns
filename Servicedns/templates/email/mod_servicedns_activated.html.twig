@@ -41,7 +41,7 @@
 
     <p><strong>Domain name:</strong> {{ service.domain_name }}</p>
 
-    <p>You may <a href="{{'login'|link({'email' : c.email }) }}" target="_blank">login</a> or <a href="{{ 'order/service/manage'|link }}/{{ order.id }}" target="_blank">manage your order.</a>
+    <p>You may <a href="{{'login'|url({'email' : c.email }) }}" target="_blank">login</a> or <a href="{{ 'order/service/manage'|url }}/{{ order.id }}" target="_blank">manage your order.</a>
 
 	<p class="signature">{{ guest.system_company.signature }}</p>
 </body>

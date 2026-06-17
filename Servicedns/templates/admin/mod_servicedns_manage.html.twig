@@ -5,8 +5,7 @@
     <div class="card-body overflow-auto">
         <h3>{{ 'DNS Record Management'|trans }}</h3>
         
-        <form class="mb-4 api-form" method="post" action="{{ 'api/client/servicedns/add'|link }}" data-api-msg="{{ 'New record added'|trans }}">
-          <input type="hidden" name="CSRFToken" value="{{ CSRFToken }}"/>
+        <form class="mb-4 api-form" action="{{ 'servicedns/add'|api_url(role='client') }}" {{ fb_api_form({ message: 'New Record Added'|trans }) }}>
             <div class="row g-3">
                 <div class="col-md-2">
                     <select class="form-select" name="record_type" required>
@@ -53,8 +52,7 @@
                 </thead>
                     <tbody id="recordsTableBody">
                         {% for record in service.records %}
-                        <form class="mb-4 api-form" method="post" action="{{ 'api/client/servicedns/update'|link }}" data-api-msg="{{ 'Record updated'|trans }}">
-                        <input type="hidden" name="CSRFToken" value="{{ CSRFToken }}"/>
+                        <form class="mb-4 api-form" action="{{ 'servicedns/update'|api_url(role='client') }}" {{ fb_api_form({ message: 'Record updated'|trans }) }}>
                         <input type="hidden" name="record_id" value="{{ record.id }}"/>
                         <input type="hidden" name="record_type" value="{{ record.type }}"/>
                         <input type="hidden" name="record_name" value="{{ record.host }}"/>
@@ -105,7 +103,7 @@ function confirmDelete(form) {
     event.preventDefault();
 
     if (confirm("Are you sure you want to delete this record?")) {
-        fetch("{{ 'api/client/servicedns/del'|link }}", {
+        fetch("{{ 'api/client/servicedns/del'|url }}", {
             method: 'POST',
             body: new FormData(form),
             headers: {

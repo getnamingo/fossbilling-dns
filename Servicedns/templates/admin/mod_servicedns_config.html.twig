@@ -1,8 +1,7 @@
 {% import 'macro_functions.html.twig' as mf %}
     <div class="card-body">
         <h1>{{ 'DNS Provider settings'|trans }}</h1>
-        <form method="post" action="{{ 'api/admin/product/update_config'|link }}" class="api-form save" data-api-msg="{{ 'DNS Provider settings updated'|trans }}">
-            <input type="hidden" name="CSRFToken" value="{{ CSRFToken }}"/>
+        <form action="{{ 'product/update_config'|api_url(role='admin') }}" class="api-form save" {{ fb_api_form({ message: 'DNS Provider settings updated'|trans }) }}>
             <div class="mb-3 row">
                 <p>{{ 'Select your DNS provider from the list. Ensure you have an account with the chosen service.'|trans }}</p>
                 <label class="form-label col-3 col-form-label">{{ 'Provider'|trans }}:</label>
