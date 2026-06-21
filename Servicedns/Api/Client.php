@@ -12,7 +12,7 @@
 
 namespace Box\Mod\Servicedns\Api;
 
-class Client extends \Api_Abstract
+class Client extends \FOSSBilling\Api\AbstractApi
 {
     /**
      * Used to add a DNS record for a specified domain.
