@@ -1,0 +1,21 @@
+{
+    "name": "namingo/fossbilling-dns",
+    "description": "DNS hosting module for FOSSBilling",
+    "type": "library",
+    "license": "Apache-2.0",
+    "require": {
+        "php": ">=8.3",
+        "namingo/plexdns": "dev-main#f1776a214a9e7e14a3e167495a978ae0b4977436"
+    },
+    "require-dev": {
+        "gabordemooij/redbean": "^5.7.5",
+        "pimple/pimple": "^3.6",
+        "twig/twig": "^3.22"
+    },
+    "config": {
+        "allow-plugins": {"php-http/discovery": true}
+    },
+    "scripts": {
+        "test": "php ../tests/ServiceTest.php"
+    }
+}

@@ -5,7 +5,7 @@
     <div class="card-body overflow-auto">
         <h3>{{ 'DNS Record Management'|trans }}</h3>
         
-        <form class="mb-4 api-form" action="{{ 'servicedns/add'|api_url(role='admin') }}" {{ fb_api_form({ message: 'New Record Added'|trans }) }}>
+        <form class="mb-4 api-form" action="{{ 'servicedns/add'|api_url(role='admin') }}" {{ fb_api_form({ reload: true }) }}>
             <div class="row g-3">
                 <div class="col-md-2">
                     <select class="form-select" name="record_type" required>
@@ -20,16 +20,16 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <input type="text" class="form-control" placeholder="example." name="record_name" required>
+                    <input type="text" class="form-control" placeholder="www or @" name="record_name">
                 </div>
                 <div class="col-md-3">
                     <input type="text" class="form-control" placeholder="127.0.0.1" name="record_value" required>
                 </div>
                 <div class="col-sm">
-                    <input type="number" class="form-control" placeholder="TTL" name="record_ttl" value="3600" required>
+                    <input type="number" class="form-control" placeholder="TTL" min="1" max="2147483647" name="record_ttl" value="3600" required>
                 </div>
                 <div class="col-sm">
-                    <input type="number" class="form-control" placeholder="Priority" name="record_priority">
+                    <input type="number" class="form-control" placeholder="MX priority" min="0" max="65535" name="record_priority">
                 </div>
                 <div class="col-md-auto">
                     <input type="hidden" name="order_id" value="{{ order.id }}">
@@ -67,10 +67,10 @@
                                 {% endif %}">{{ dns_type }}</span></td>
                                 <td><strong>{{ record.host }}</strong></td>
                                 <td><input type="text" class="form-control" placeholder="127.0.0.1" name="record_value" value="{{ record.value }}" form="{{ record_form_id }}" style="min-width:200px;" required></td>
-                                <td><input type="text" class="form-control" placeholder="600" name="record_ttl" value="{{ record.ttl }}" form="{{ record_form_id }}" style="min-width:100px;" required></td>
+                                <td><input type="number" min="1" max="2147483647" class="form-control" placeholder="600" name="record_ttl" value="{{ record.ttl }}" form="{{ record_form_id }}" style="min-width:100px;" required></td>
                                 <td>{% if record.type == 'MX' %}<span class="badge bg-dark-lt">{{ record.priority }}</span>{% endif %}</td>
                                 <td>
-                                    <form id="{{ record_form_id }}" class="d-inline-flex gap-1" action="{{ 'servicedns/update'|api_url(role='admin') }}" {{ fb_api_form({ message: 'Record updated'|trans }) }}>
+                                    <form id="{{ record_form_id }}" class="d-inline-flex gap-1" action="{{ 'servicedns/update'|api_url(role='admin') }}" {{ fb_api_form({ reload: true }) }}>
                                         <input type="hidden" name="record_id" value="{{ record.id }}"/>
                                         <input type="hidden" name="record_type" value="{{ record.type }}"/>
                                         <input type="hidden" name="record_name" value="{{ record.host }}"/>
@@ -108,16 +108,9 @@ function confirmDelete(event, form) {
         FOSSBilling.api.admin.post(
             'servicedns/del',
             new FormData(form),
-            () => window.location.reload(),
-            error => console.error('Error:', error)
+            () => window.location.reload()
         );
     }
 }
 
-document.addEventListener('hidden.bs.toast', function (event) {
-    const toast = event.target;
-    if (toast.classList.contains('toast')) {
-        window.location.reload();
-    }
-});
 </script>

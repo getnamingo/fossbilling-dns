@@ -18,20 +18,20 @@
   </div>
 </div>
 
+{% set nameservers = guest.servicedns_nameservers({product_id: product.id}) %}
+{% if nameservers %}
 <div class="card text-white bg-info mb-3">
-  <div class="card-header"><h5 class="card-title">Nameserver Setup</h5></div>
+  <div class="card-header"><h5 class="card-title">{{ 'Nameserver Setup'|trans }}</h5></div>
   <div class="card-body">
-    <p class="card-text">Please update your domain’s nameserver settings at your domain registrar to the following:</p>
+    <p class="card-text">{{ 'Set these nameservers at your domain registrar:'|trans }}</p>
     <ul>
-      {% for i in 1..5 %}
-        {% set key = 'ns' ~ i %}
-        {% if config[key] is defined and config[key] %}
-          <li>{{ config[key] }}</li>
-        {% endif %}
+      {% for nameserver in nameservers %}
+        <li>{{ nameserver }}</li>
       {% endfor %}
     </ul>
   </div>
 </div>
+{% endif %}
 
 <input type="hidden" name="id" value="{{ product.id }}"/>
 <input type="hidden" name="action" value="register" id="dns-action"/>

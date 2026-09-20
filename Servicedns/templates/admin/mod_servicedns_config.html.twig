@@ -29,6 +29,14 @@
                     <input type="text" class="form-control" name="config[apikey]" value="{{ config.apikey|default('') }}">
                 </div>
             </div>
+            <div class="mb-3 row">
+                <label class="form-label col-3 col-form-label">{{ 'ClouDNS authentication ID'|trans }}</label>
+                <div class="col"><input class="form-control" name="config[cloudns_auth_id]" value="{{ config.cloudns_auth_id|default('') }}"></div>
+            </div>
+            <div class="mb-3 row">
+                <label class="form-label col-3 col-form-label">{{ 'ClouDNS authentication password'|trans }}</label>
+                <div class="col"><input type="password" class="form-control" name="config[cloudns_auth_password]" value="{{ config.cloudns_auth_password|default('') }}" autocomplete="new-password"></div>
+            </div>
             <div class="hr-text">
               <span>BIND and PowerDNS Additional Settings</span>
             </div>

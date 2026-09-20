@@ -26,7 +26,7 @@ Most DNS providers **require an API key**, while some may need **additional sett
 ## Installation
 
 > [!WARNING]
-> **fossbilling-dns v1.2.3** supports only **FOSSBilling v0.8.6+**.
+> **fossbilling-dns v1.2.4** requires **FOSSBilling v0.8.6+** and **PHP 8.3+**, and includes fixes for **FOSSBilling v0.8.7**.
 >
 > If you are using **FOSSBilling v0.7.2**, please use **fossbilling-dns v1.1.2** instead.
 
@@ -37,6 +37,8 @@ Start by downloading the latest version of FOSSBilling from the official website
 ### 2. Installation and Configuration of DNS hosting module:
 
 First, download this repository. After successfully downloading the repository, move the `Servicedns` directory into the `[FOSSBilling]/modules` directory.
+
+Release archives include dependencies. When installing from source, run `composer install --no-dev` inside `Servicedns` first. Use the committed lock file: it pins the PlexDNS revision containing the provider record-ID and Hetzner fixes, which are not in the current stable PlexDNS tag.
 
 ### (BIND9 Module only) 3. Installation of BIND9 API Server:
 
@@ -62,7 +64,10 @@ To upgrade the DNS hosting module to the latest version, download the newest rel
 2. Extract the archive to a temporary directory.
 3. Locate the `Servicedns` directory inside the extracted release.
 4. Copy the `Servicedns` directory into `[FOSSBilling]/modules/`, **overwriting** the existing `Servicedns` directory.
-5. Clear FOSSBilling cache if applicable and reload the admin panel.
+5. From the FOSSBilling directory, run `php modules/Servicedns/upgrade.php` before reopening client access. This preserves existing provider credentials in private service configuration, removes them from client-visible orders and carts, and widens the domain-name column. Back up your database first; the migration can safely be run again.
+6. Clear FOSSBilling cache if applicable and reload the admin panel.
+
+Earlier versions exposed provider credentials through order/service configuration. Rotate credentials used by those versions and update both the product configuration and existing private `service_dns.config` snapshots. Updating a product alone does not change existing services.
 
 ### Upgrade via console
 
@@ -70,10 +75,12 @@ From your server:
 
 ```bash
 cd /tmp
-wget https://github.com/getnamingo/fossbilling-dns/releases/download/v1.2.3/fossbilling-dns-v1.2.3.tar.gz
-tar xzf fossbilling-dns-v1.2.3.tar.gz
-cd fossbilling-dns-v1.2.3
-mv Servicedns /path/to/FOSSBilling/modules/Servicedns
+wget https://github.com/getnamingo/fossbilling-dns/releases/download/v1.2.4/fossbilling-dns-v1.2.4.tar.gz
+tar xzf fossbilling-dns-v1.2.4.tar.gz
+cd fossbilling-dns-v1.2.4
+cp -a Servicedns/. /path/to/FOSSBilling/modules/Servicedns/
+cd /path/to/FOSSBilling
+php modules/Servicedns/upgrade.php
 ```
 
 After upgrading, log in to the FOSSBilling admin panel and verify that the module version is updated under Extensions -> Overview.

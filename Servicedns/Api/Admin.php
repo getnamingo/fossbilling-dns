@@ -21,7 +21,8 @@ class Admin extends \FOSSBilling\Api\AbstractApi
      */
     public function add($data): bool
     {
-        return $this->getService()->addRecord($data);
+        $this->checkPermissions('servicedns', 'manage');
+        return $this->getService()->addRecord($data, $this->getIdentity());
     }
     
     /**
@@ -31,7 +32,8 @@ class Admin extends \FOSSBilling\Api\AbstractApi
      */
     public function update($data): bool
     {
-        return $this->getService()->updateRecord($data);
+        $this->checkPermissions('servicedns', 'manage');
+        return $this->getService()->updateRecord($data, $this->getIdentity());
     }
 
     /**
@@ -41,6 +43,7 @@ class Admin extends \FOSSBilling\Api\AbstractApi
      */
     public function del($data): bool
     {
-        return $this->getService()->delRecord($data);
+        $this->checkPermissions('servicedns', 'manage');
+        return $this->getService()->delRecord($data, $this->getIdentity());
     }
 }
