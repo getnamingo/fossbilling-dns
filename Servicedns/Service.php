@@ -12,8 +12,8 @@
 
 namespace Box\Mod\Servicedns;
 
-define('PLEX_TABLE_ZONES', 'service_dns');
-define('PLEX_TABLE_RECORDS', 'service_dns_records');
+defined('PLEX_TABLE_ZONES') || define('PLEX_TABLE_ZONES', 'service_dns');
+defined('PLEX_TABLE_RECORDS') || define('PLEX_TABLE_RECORDS', 'service_dns_records');
 
 if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     require_once __DIR__ . '/vendor/autoload.php';
@@ -27,599 +27,286 @@ class Service implements InjectionAwareInterface
 {
     protected ?\Pimple\Container $di = null;
 
-    public function setDi(\Pimple\Container $di): void
-    {
-        $this->di = $di;
-    }
+    public function setDi(\Pimple\Container $di): void { $this->di = $di; }
+    public function getDi(): ?\Pimple\Container { return $this->di; }
 
-    public function getDi(): ?\Pimple\Container
+    public function getModulePermissions(): array
     {
-        return $this->di;
+        return ['manage' => [
+            'type' => 'bool',
+            'display_name' => __trans('Manage DNS records'),
+            'description' => __trans('Allows staff to add, update and delete DNS records.'),
+        ]];
     }
 
     public function getCartProductTitle($product, array $data)
     {
-        return __trans('DNS Hosting for :domain', [':domain' => $data['domain_name']]);
+        return __trans('DNS Hosting for :domain', [':domain' => $data['domain_name'] ?? '']);
     }
 
-    public function attachOrderConfig(\Model_Product $product, array $data): array
+    public function clientSettableConfigKeys(): array
     {
-        $config = [];
-        if (!empty($product->config)) {
-            $decoded = json_decode($product->config, true);
-            if (is_array($decoded)) {
-                $config = $decoded;
-            }
+        return ['domain_name', 'period', 'quantity'];
+    }
+
+    public function attachOrderConfig(\Box\Mod\Product\Entity\Product|\Model_Product $product, array $data): array
+    {
+        // Cart/order config is returned to clients by FOSSBilling. Never put secrets here.
+        $config = $this->decodeConfig(method_exists($product, 'getConfig') ? $product->getConfig() : $product->config);
+        $public = $this->publicConfig($config);
+        $public['domain_name'] = $this->normalizeDomain($data['domain_name'] ?? '');
+        foreach (['period', 'quantity'] as $key) {
+            if (isset($data[$key])) $public[$key] = $data[$key];
         }
-
-        return array_merge($config, $data);
+        return $public;
     }
 
-    public function create(OODBBean $order)
+    public function validateOrderData(array $data): void
     {
-        $config = json_decode((string)$order->config, true) ?: [];
-        $domainName = $config['domain_name'] ?? null;
+        $name = $this->normalizeDomain($data['domain_name'] ?? '');
+        if ($this->di['db']->findOne('service_dns', 'domain_name = :name', [':name' => $name])) {
+            throw new \FOSSBilling\InformationException('This DNS zone already has an order.');
+        }
+    }
+
+    private function normalizeDomain($name): string
+    {
+        if (!is_string($name)) throw new \FOSSBilling\InformationException('A valid domain name is required.');
+        $name = strtolower(rtrim(trim($name), '.'));
+        if (function_exists('idn_to_ascii')) {
+            $name = idn_to_ascii($name, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46) ?: '';
+        }
+        if (strlen($name) > 253 || !str_contains($name, '.') || !filter_var($name, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)) {
+            throw new \FOSSBilling\InformationException('A valid domain name is required.');
+        }
+        return $name;
+    }
+
+    private function decodeConfig(?string $json): array
+    {
+        $config = json_decode($json ?? '', true);
+        return is_array($config) ? $config : [];
+    }
+
+    private function publicConfig(array $config): array
+    {
+        $keys = ['domain_name', 'provider', 'period', 'quantity'];
+        for ($i = 1; $i <= 13; $i++) $keys[] = 'ns' . $i;
+        return array_intersect_key($config, array_flip($keys));
+    }
+
+    private function productConfig(int $productId): array
+    {
+        $products = $this->di['mod_service']('product');
+        $product = method_exists($products, 'findProductById')
+            ? $products->findProductById($productId)
+            : $this->di['db']->getExistingModelById('Product', $productId);
+        return $this->decodeConfig(method_exists($product, 'getConfig') ? $product->getConfig() : $product->config);
+    }
+
+    public function getNameservers($product): array
+    {
+        $config = $this->decodeConfig(method_exists($product, 'getConfig') ? $product->getConfig() : $product->config);
+        $nameservers = [];
+        for ($i = 1; $i <= 13; $i++) {
+            if (!empty($config['ns' . $i]) && is_string($config['ns' . $i])) $nameservers[] = $config['ns' . $i];
+        }
+        return $nameservers;
+    }
+
+    public function create(\Model_ClientOrder|OODBBean $order): OODBBean
+    {
+        $public = $this->decodeConfig($order->config);
+        $domainName = $this->normalizeDomain($public['domain_name'] ?? '');
+        $this->validateOrderData(['domain_name' => $domainName]);
+        // Only the administrator's product supplies connection settings.
+        $config = $this->productConfig((int)$order->product_id);
+        $config['domain_name'] = $domainName;
+        unset($config['_provisioned']);
 
         $model = $this->di['db']->dispense('service_dns');
-        $model->client_id   = $order->client_id;
-        $model->config      = $order->config;
+        $model->client_id = $order->client_id;
         $model->domain_name = $domainName;
-
-        $model->created_at = date('Y-m-d H:i:s');
-        $model->updated_at = date('Y-m-d H:i:s');
-
+        $model->config = json_encode($config, JSON_THROW_ON_ERROR);
+        $model->created_at = $model->updated_at = date('Y-m-d H:i:s');
         $this->di['db']->store($model);
-
-        $order->service_id = $model->id;
-        $order->title = $domainName ? ('DNS: ' . $domainName) : 'DNS';
+        // FOSSBilling saves service_id after create() returns.
+        $order->config = json_encode($this->publicConfig($config) + array_intersect_key($public, array_flip(['period', 'quantity'])), JSON_THROW_ON_ERROR);
+        $order->title = 'DNS: ' . $domainName;
         $this->di['db']->store($order);
-
         return $model;
     }
 
-    public function activate(OODBBean $order, OODBBean $model): bool
+    protected function plex(): PlexService
     {
-        if (!$model || empty($model->id)) {
-            throw new \FOSSBilling\InformationException('Order does not exist.');
-        }
-
-        $config = json_decode((string)$order->config, true) ?: [];
-        $domainName = $config['domain_name'] ?? null;
-        $provider   = $config['provider'] ?? null;
-        $apikey     = $config['apikey'] ?? null;
-
-        $model->domain_name = $domainName;
-        $model->updated_at  = date('Y-m-d H:i:s');
-        $this->di['db']->store($model);
-
-        $service = new PlexService($this->di['pdo']);
-
-        $cfg = [
-            'domain_name' => $domainName,
-            'provider'    => $provider,
-            'apikey'      => $apikey,
-        ];
-
-        if ($provider === 'PowerDNS') {
-            $cfg['powerdnsip'] = $config['powerdnsip'] ?? null;
-            for ($i = 1; $i <= 13; $i++) {
-                $k = 'ns' . $i;
-                if (!empty($config[$k])) $cfg[$k] = $config[$k];
-            }
-        } elseif ($provider === 'Bind') {
-            $cfg['bindip'] = $config['bindip'] ?? null;
-            for ($i = 1; $i <= 13; $i++) {
-                $k = 'ns' . $i;
-                if (!empty($config[$k])) $cfg[$k] = $config[$k];
-            }
-        }
-
-        $domainOrder = [
-            'client_id' => $order->client_id,
-            'config'    => json_encode($cfg, JSON_UNESCAPED_SLASHES),
-        ];
-
-        $domain = $service->createDomain($domainOrder);
-
-        $model->config      = $order->config;
-        $this->di['db']->store($model);
-
-        return true;
+        return new PlexService($this->di['pdo']);
     }
 
-    public function suspend(OODBBean $order, OODBBean $model): bool
+    private function providerConfig(OODBBean $model): array
     {
+        $config = $this->decodeConfig($model->config);
+        $config['domain_name'] = (string)$model->domain_name;
+        if (empty($config['domain_name']) || empty($config['provider'])) {
+            throw new \FOSSBilling\InformationException('DNS domain/provider configuration is missing.');
+        }
+        // Preserve ClouDNS authentication, SOA, nameservers and secondary server settings.
+        return $config;
+    }
+
+    public function activate(\Model_ClientOrder|OODBBean $order, OODBBean $model): bool
+    {
+        $config = $this->providerConfig($model);
+        if (!empty($config['_provisioned'])) return true;
+        $this->plex()->createDomain(['client_id' => $order->client_id, 'config' => json_encode($config, JSON_THROW_ON_ERROR)]);
+        // PlexDNS upserts the same row. Do not overwrite its new zoneId with the stale bean.
+        $model->setProperty('zoneId', $this->di['db']->getCell('SELECT zoneId FROM service_dns WHERE id = :id', [':id' => $model->id]));
+        $config['_provisioned'] = true;
+        $model->config = json_encode($config, JSON_THROW_ON_ERROR);
         $model->updated_at = date('Y-m-d H:i:s');
         $this->di['db']->store($model);
-
         return true;
     }
 
-    public function unsuspend(OODBBean $order, OODBBean $model): bool
+    public function suspend(\Model_ClientOrder|OODBBean $order, OODBBean $model): bool
     {
+        // DNS keeps resolving; API editing is blocked by the order status check below.
         $model->updated_at = date('Y-m-d H:i:s');
         $this->di['db']->store($model);
-
         return true;
     }
 
-    public function cancel(OODBBean $order, OODBBean $model): bool
+    public function unsuspend(\Model_ClientOrder|OODBBean $order, OODBBean $model): bool { return $this->suspend($order, $model); }
+    public function cancel(\Model_ClientOrder|OODBBean $order, OODBBean $model): bool { return $this->suspend($order, $model); }
+    public function uncancel(\Model_ClientOrder|OODBBean $order, OODBBean $model): bool { return $this->unsuspend($order, $model); }
+    public function renew(\Model_ClientOrder|OODBBean $order, OODBBean $model): bool { return $this->unsuspend($order, $model); }
+
+    public function delete(\Model_ClientOrder|OODBBean|null $order, ?OODBBean $model): void
     {
-        return $this->suspend($order, $model);
+        // Deleting an unprovisioned order must never delete a zone just by its submitted name.
+        if (!$model || !$model->id) return;
+        $config = $this->providerConfig($model);
+        if (!empty($config['_provisioned']) || ($order && !empty($order->activated_at))) {
+            $this->plex()->deleteDomain(['config' => json_encode($config, JSON_THROW_ON_ERROR)]);
+        }
+        // Do not swallow provider failures or treat an unrelated 404 as successful deletion.
+        $this->di['db']->trash($model);
     }
 
-    public function uncancel(OODBBean $order, OODBBean $model): bool
+    public function toApiArray(OODBBean $model, $deep = true, $identity = null): array
     {
-        return $this->unsuspend($order, $model);
-    }
-
-    public function delete(?OODBBean $order, ?OODBBean $model): void
-    {
-        if ($order === null) {
-            throw new \FOSSBilling\InformationException("Order is not provided.");
-        }
-
-        $config = json_decode((string)$order->config, true) ?: [];
-        $domainName = $config['domain_name'] ?? null;
-        $provider   = $config['provider'] ?? null;
-        $apiKey     = $config['apikey'] ?? null;
-
-        if (empty($domainName)) {
-            throw new \FOSSBilling\InformationException('Domain name is not set.');
-        }
-        if (empty($provider)) {
-            throw new \FOSSBilling\InformationException('DNS provider is not set.');
-        }
-
-        try {
-            $service = new PlexService($this->di['pdo']);
-
-            $cfg = [
-                'domain_name' => $domainName,
-                'provider'    => $provider,
-                'apikey'      => $apiKey,
-            ];
-
-            if ($provider === 'PowerDNS') {
-                $cfg['powerdnsip'] = $config['powerdnsip'] ?? null;
-            }
-
-            if ($provider === 'Bind') {
-                $cfg['bindip'] = $config['bindip'] ?? null;
-            }
-
-            if ($provider === 'PowerDNS' || $provider === 'Bind') {
-                for ($i = 1; $i <= 13; $i++) {
-                    $k = 'ns' . $i;
-                    if (!empty($config[$k])) {
-                        $cfg[$k] = $config[$k];
-                    }
-                }
-            }
-
-            $service->deleteDomain([
-                'config' => json_encode($cfg, JSON_UNESCAPED_SLASHES),
-            ]);
-        } catch (\Throwable $e) {
-            $msg = (string)$e->getMessage();
-
-            if (
-                stripos($msg, 'not found') !== false ||
-                stripos($msg, '404') !== false
-            ) {
-                if (isset($this->di['logger'])) {
-                    $this->di['logger']->warning(sprintf(
-                        'DNS delete: domain "%s" not found, continuing. (%s)',
-                        $domainName,
-                        $msg
-                    ));
-                } else {
-                    error_log(sprintf('DNS delete: domain "%s" not found, continuing. (%s)', $domainName, $msg));
-                }
-            } else {
-                throw new \FOSSBilling\InformationException(
-                    sprintf(
-                        'Failed to delete DNS zone "%s": %s',
-                        $domainName,
-                        $msg
-                    )
-                );
-            }
-        }
-
-        if (is_object($model)) {
-            $this->di['db']->trash($model);
-        }
-    }
-
-    public function toApiArray(OODBBean $model): array
-    {
-        $domain_id = $this->di['db']->findOne('service_dns', 'domain_name = :domain_name', [':domain_name' => $model->domain_name]);
-        $records = $this->di['db']->getAll('SELECT id, type, host, value, ttl, priority FROM service_dns_records WHERE domain_id=:domain_id', ['domain_id' => $domain_id['id']]);
-        $decodedConfig = json_decode((string) $model->config, true);
-
         return [
             'id' => $model->id,
             'created_at' => $model->created_at,
             'updated_at' => $model->updated_at,
             'domain_name' => $model->domain_name,
-            'records' => $records,
-            'config' => is_array($decodedConfig) ? $decodedConfig : [],
+            'records' => $this->di['db']->getAll('SELECT id, type, host, value, ttl, priority FROM service_dns_records WHERE domain_id = :id', [':id' => $model->id]),
+            'config' => $this->publicConfig($this->decodeConfig($model->config)),
         ];
     }
 
-    /**
-     * Used to add a DNS record for a specified domain.
-     *
-     * @param array $data An array containing the necessary information for adding a DNS record.
-     * 
-     * @return bool Returns true on successful addition of the DNS record, false otherwise.
-     */
-    public function addRecord(array $data): bool
-    {           
-        if (!empty($data['order_id'])) {
-            $order = $this->di['db']->getExistingModelById('ClientOrder', $data['order_id'], 'Order not found');
-            $orderService = $this->di['mod_service']('order');
-            $model = $orderService->getOrderService($order);
-        }
-
-        if (!$model instanceof OODBBean || empty($model->id)) {
-            throw new \FOSSBilling\InformationException('Domain does not exist');
-        }
-
-        try {
-            $this->di['is_client_logged'];
-            $client = $this->di['loggedin_client'];
-        } catch (\Exception) {
-            $client = null;
-        }
-
-        if ($client !== null && (int)$client->id !== (int)$model->client_id) {
-            throw new \FOSSBilling\InformationException('Domain does not exist');
-        }
-
-        $config = json_decode((string)$model->config, true) ?: [];
-        $domainName = $config['domain_name'] ?? null;
-        $provider   = $config['provider'] ?? null;
-        $apiKey     = $config['apikey'] ?? null;
-        
-        if (empty($domainName)) {
-            throw new \FOSSBilling\InformationException('Domain name is not set.');
-        }
-        if (empty($provider)) {
-            throw new \FOSSBilling\InformationException('DNS provider is not set.');
-        }
-        
-        $recordName  = (string)($data['record_name'] ?? '');
-        $recordType  = strtoupper((string)($data['record_type'] ?? ''));
-        $recordValue = (string)($data['record_value'] ?? '');
-        $ttl         = isset($data['record_ttl']) ? (int)$data['record_ttl'] : 3600;
-        $priority    = (isset($data['record_priority']) && $data['record_priority'] !== '') ? (int)$data['record_priority'] : null;
-
-        if ($recordType === '' || $recordValue === '') {
-            throw new \FOSSBilling\InformationException('Record type and value are required.');
-        }
-
-        if ($recordType === 'MX' && $priority === null) {
-            $priority = 0;
-        }
-
-        if ($recordType === 'TXT') {
-            $v = trim($recordValue);
-            if ($v === '' || $v[0] !== '"' || substr($v, -1) !== '"') {
-                $recordValue = '"' . str_replace('"', '\"', $v) . '"';
-            }
-        }
-
-        if (in_array($provider, ['PowerDNS'], true) && $recordType === 'CNAME') {
-            $recordValue = rtrim(trim($recordValue), '.') . '.';
-        }
-
-        try {
-            $service = new PlexService($this->di['pdo']);
-
-            $req = [
-                'domain_name'     => $domainName,
-                'record_name'     => $recordName,
-                'record_type'     => $recordType,
-                'record_value'    => $recordValue,
-                'record_ttl'      => $ttl,
-                'record_priority' => $priority,
-                'provider'        => $provider,
-                'apikey'          => $apiKey,
-            ];
-
-            if ($provider === 'PowerDNS') {
-                $req['powerdnsip'] = $config['powerdnsip'] ?? null;
-            }
-
-            if ($provider === 'Bind') {
-                $req['bindip'] = $config['bindip'] ?? null;
-            }
-
-            if ($provider === 'PowerDNS' || $provider === 'Bind') {
-                for ($i = 1; $i <= 13; $i++) {
-                    $k = 'ns' . $i;
-                    if (!empty($config[$k])) {
-                        $req[$k] = $config[$k];
-                    }
-                }
-            }
-
-            $service->addRecord($req);
-        } catch (\Throwable $e) {
-            throw new \FOSSBilling\InformationException(
-                sprintf(
-                    'Failed to add DNS record for "%s": %s',
-                    $domainName,
-                    $e->getMessage()
-                )
-            );
-        }
-
-        $model->updated_at = date('Y-m-d H:i:s');
-        $this->di['db']->store($model);
-
-        return true;
-    }
-    
-    /**
-     * Used to update a DNS record for a specified domain.
-     *
-     * @param array $data An array containing the necessary information for updating a DNS record.
-     * 
-     * @return bool Returns true on successful update of the DNS record, false otherwise.
-     */
-    public function updateRecord(array $data): bool
-    {      
-        if (!empty($data['order_id'])) {
-            $order = $this->di['db']->getExistingModelById('ClientOrder', $data['order_id'], 'Order not found');
-            $orderService = $this->di['mod_service']('order');
-            $model = $orderService->getOrderService($order);
-        }
-
-        if (!$model instanceof OODBBean || empty($model->id)) {
-            throw new \FOSSBilling\InformationException('Domain does not exist');
-        }
-
-        try {
-            $this->di['is_client_logged'];
-            $client = $this->di['loggedin_client'];
-        } catch (\Exception) {
-            $client = null;
-        }
-
-        if ($client !== null && (int)$client->id !== (int)$model->client_id) {
-            throw new \FOSSBilling\InformationException('Domain does not exist');
-        }
-        
-        $config = json_decode((string)$model->config, true) ?: [];
-        $domainName = $config['domain_name'] ?? null;
-        $provider   = $config['provider'] ?? null;
-        $apiKey     = $config['apikey'] ?? null;
-        
-        if (empty($domainName)) {
-            throw new \FOSSBilling\InformationException('Domain name is not set.');
-        }
-        if (empty($provider)) {
-            throw new \FOSSBilling\InformationException('DNS provider is not set.');
-        }
-        
-        $recordName  = (string)($data['record_name'] ?? '');
-        $recordType  = strtoupper((string)($data['record_type'] ?? ''));
-        $recordValue = (string)($data['record_value'] ?? '');
-        $oldValue    = (string)($data['old_value'] ?? '');
-        $ttl         = isset($data['record_ttl']) ? (int)$data['record_ttl'] : 3600;
-        $priority    = (isset($data['record_priority']) && $data['record_priority'] !== '') ? (int)$data['record_priority'] : null;
-
-        if ($recordType === '' || $recordValue === '') {
-            throw new \FOSSBilling\InformationException('Record type and value are required.');
-        }
-
-        if ($recordType === 'MX' && $priority === null) {
-            $priority = 0;
-        }
-
-        if ($recordType === 'TXT') {
-            $v = trim($recordValue);
-            if ($v === '' || $v[0] !== '"' || substr($v, -1) !== '"') {
-                $recordValue = '"' . str_replace('"', '\"', $v) . '"';
-            }
-        }
-
-        if (in_array($provider, ['PowerDNS'], true) && $recordType === 'CNAME') {
-            $recordValue = rtrim(trim($recordValue), '.') . '.';
-        }
-
-        try {
-            $service = new PlexService($this->di['pdo']);
-
-            $rec = $this->di['db']->findOne(
-                'service_dns_records',
-                'domain_id = :did AND type = :t AND host = :h AND value = :v',
-                [
-                    ':did' => (int)$model->id,
-                    ':t'   => $recordType,
-                    ':h'   => $recordName,
-                    ':v'   => $oldValue,
-                ]
-            );
-
-            if (!$rec instanceof OODBBean || empty($rec->id)) {
-                throw new \FOSSBilling\InformationException('Record not found. Please refresh and try again.');
-            }
-
-            $recordId = $rec->recordId
-                ?? $rec->recordid
-                ?? ($rec->export()['recordId'] ?? null)
-                ?? ($rec->export()['recordid'] ?? null);
-            if (empty($recordId)) {
-                throw new \FOSSBilling\InformationException('This record is missing provider recordId. Please delete and re-create it.');
-            }
-
-            $req = [
-                'domain_name'     => $domainName,
-                'record_id'       => $recordId,
-                'record_name'     => $recordName,
-                'record_type'     => $recordType,
-                'record_value'    => $recordValue,
-                'old_value'       => $oldValue,
-                'record_ttl'      => $ttl,
-                'record_priority' => $priority,
-                'provider'        => $provider,
-                'apikey'          => $apiKey,
-            ];
-
-            if ($provider === 'PowerDNS') {
-                $req['powerdnsip'] = $config['powerdnsip'] ?? null;
-            }
-
-            if ($provider === 'Bind') {
-                $req['bindip'] = $config['bindip'] ?? null;
-            }
-
-            if ($provider === 'PowerDNS' || $provider === 'Bind') {
-                for ($i = 1; $i <= 13; $i++) {
-                    $k = 'ns' . $i;
-                    if (!empty($config[$k])) {
-                        $req[$k] = $config[$k];
-                    }
-                }
-            }
-
-            $recordId = $service->updateRecord($req);
-        } catch (\Throwable $e) {
-            throw new \FOSSBilling\InformationException(
-                sprintf(
-                    'Failed to modify DNS record for "%s": %s',
-                    $domainName,
-                    $e->getMessage()
-                )
-            );
-        }
-
-        $model->updated_at = date('Y-m-d H:i:s');
-        $this->di['db']->store($model);
-
-        return true;
-    }
-    
-    /**
-     * Used to delete a DNS record for a specified domain.
-     *
-     * @param array $data An array containing the identification information of the DNS record to be deleted.
-     *
-     * @return bool Returns true if the DNS record was successfully deleted, false otherwise.
-     */
-    public function delRecord(array $data): bool
+    private function managedZone(array $data, $identity): OODBBean
     {
-        if (!empty($data['order_id'])) {
-            $order = $this->di['db']->getExistingModelById('ClientOrder', $data['order_id'], 'Order not found');
-            $orderService = $this->di['mod_service']('order');
-            $model = $orderService->getOrderService($order);
+        $isAdmin = $identity instanceof \Model_Admin || $identity instanceof \Box\Mod\Staff\Entity\Admin;
+        $isClient = $identity instanceof \Model_Client || $identity instanceof \Box\Mod\Client\Entity\Client;
+        if ((!$isAdmin && !$isClient) || empty($data['order_id'])) {
+            throw new \FOSSBilling\InformationException('DNS order not found.');
         }
-
-        if (!$model instanceof OODBBean || empty($model->id)) {
-            throw new \FOSSBilling\InformationException('Domain does not exist');
+        $order = $this->di['db']->getExistingModelById('ClientOrder', (int)$data['order_id'], 'DNS order not found.');
+        $identityId = method_exists($identity, 'getId') ? $identity->getId() : $identity->id;
+        if ($order->service_type !== 'dns' || ($isClient && (int)$order->client_id !== (int)$identityId)) {
+            throw new \FOSSBilling\InformationException('DNS order not found.');
         }
-
-        try {
-            $this->di['is_client_logged'];
-            $client = $this->di['loggedin_client'];
-        } catch (\Exception) {
-            $client = null;
+        if ($order->status !== 'active') {
+            throw new \FOSSBilling\InformationException('DNS order is not active.');
         }
-
-        if ($client !== null && (int)$client->id !== (int)$model->client_id) {
-            throw new \FOSSBilling\InformationException('Domain does not exist');
+        $model = $this->di['mod_service']('order')->getOrderService($order);
+        if (!$model instanceof OODBBean || !$model->id || (int)$model->client_id !== (int)$order->client_id) {
+            throw new \FOSSBilling\InformationException('DNS order not found.');
         }
-        
-        $config = json_decode((string)$model->config, true) ?: [];
-        $domainName = $config['domain_name'] ?? null;
-        $provider   = $config['provider'] ?? null;
-        $apiKey     = $config['apikey'] ?? null;
-        
-        if (empty($domainName)) {
-            throw new \FOSSBilling\InformationException('Domain name is not set.');
+        return $model;
+    }
+
+    private function record(OODBBean $model, array $data): OODBBean
+    {
+        if (empty($data['record_id'])) throw new \FOSSBilling\InformationException('Record ID is required.');
+        $record = $this->di['db']->findOne('service_dns_records', 'id = :id AND domain_id = :domain', [
+            ':id' => (int)$data['record_id'], ':domain' => $model->id,
+        ]);
+        if (!$record instanceof OODBBean || !$record->id) {
+            throw new \FOSSBilling\InformationException('Record not found. Please refresh and try again.');
         }
-        if (empty($provider)) {
-            throw new \FOSSBilling\InformationException('DNS provider is not set.');
+        return $record;
+    }
+
+    private function recordData(array $data, array $config): array
+    {
+        $type = strtoupper((string)($data['record_type'] ?? ''));
+        if (!preg_match('/^[A-Z][A-Z0-9]{0,9}$/D', $type)) {
+            throw new \FOSSBilling\InformationException('Unsupported record type.');
         }
-        
-        $recordName  = (string)($data['record_name'] ?? '');
-        $recordType  = strtoupper((string)($data['record_type'] ?? ''));
-        $recordValue = (string)($data['record_value'] ?? '');
-        $ttl         = isset($data['record_ttl']) ? (int)$data['record_ttl'] : 3600;
-        $priority    = (isset($data['record_priority']) && $data['record_priority'] !== '') ? (int)$data['record_priority'] : null;
-
-        if ($recordType === '' || $recordValue === '') {
-            throw new \FOSSBilling\InformationException('Record type and value are required.');
+        $value = $data['record_value'] ?? null;
+        if (!is_string($value) || ($value === '' && $type !== 'TXT')) {
+            throw new \FOSSBilling\InformationException('Record value is required.');
         }
-
-        try {
-            $service = new PlexService($this->di['pdo']);
-
-            $rec = $this->di['db']->findOne(
-                'service_dns_records',
-                'domain_id = :did AND type = :t AND host = :h AND value = :v',
-                [
-                    ':did' => (int)$model->id,
-                    ':t'   => $recordType,
-                    ':h'   => $recordName,
-                    ':v'   => $recordValue,
-                ]
-            );
-
-            if (!$rec instanceof OODBBean || empty($rec->id)) {
-                throw new \FOSSBilling\InformationException('Record not found. Please refresh and try again.');
+        $ttl = filter_var($data['record_ttl'] ?? 3600, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
+        $priority = filter_var(($data['record_priority'] ?? '') === '' ? 0 : $data['record_priority'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 65535]]);
+        if ($ttl === false || ($type === 'MX' && $priority === false)) {
+            throw new \FOSSBilling\InformationException('Invalid TTL or MX priority.');
+        }
+        $name = strtolower(trim((string)($data['record_name'] ?? '')));
+        $domain = $config['domain_name'];
+        if ($name === '@' || rtrim($name, '.') === $domain) $name = '';
+        if (str_ends_with($name, '.' . $domain . '.')) $name = substr($name, 0, -strlen($domain) - 2);
+        if (str_ends_with($name, '.' . $domain)) $name = substr($name, 0, -strlen($domain) - 1);
+        if ($name !== '' && (!preg_match('/^(?:\*|[a-z0-9_-]+)(?:\.[a-z0-9_-]+)*$/D', $name) || strlen($name . '.' . $domain) > 253)) {
+            throw new \FOSSBilling\InformationException('Use a relative record name such as www, or @ for the zone apex.');
+        }
+        // Zone-file APIs need quotes; JSON content APIs expect the original TXT value.
+        if (in_array($type, ['TXT', 'SPF'], true) && in_array($config['provider'], ['Desec', 'PowerDNS'], true)) {
+            if (!(str_starts_with($value, '"') && str_ends_with($value, '"'))) {
+                $value = '"' . addcslashes($value, "\\\"") . '"';
             }
-
-            $recordId = $rec->recordId
-                ?? $rec->recordid
-                ?? ($rec->export()['recordId'] ?? null)
-                ?? ($rec->export()['recordid'] ?? null);
-            if (empty($recordId)) {
-                throw new \FOSSBilling\InformationException('This record is missing provider recordId. Please delete and re-create it.');
-            }
-
-            $req = [
-                'domain_name'   => $domainName,
-                'record_id'     => $recordId,
-                'record_name'   => $recordName,
-                'record_type'   => $recordType,
-                'record_value'  => $recordValue,
-                'provider'      => $provider,
-                'apikey'        => $apiKey,
-            ];
-
-            if ($provider === 'PowerDNS') {
-                $req['powerdnsip'] = $config['powerdnsip'] ?? null;
-            }
-
-            if ($provider === 'Bind') {
-                $req['bindip'] = $config['bindip'] ?? null;
-            }
-
-            if ($provider === 'PowerDNS' || $provider === 'Bind') {
-                for ($i = 1; $i <= 13; $i++) {
-                    $k = 'ns' . $i;
-                    if (!empty($config[$k])) {
-                        $req[$k] = $config[$k];
-                    }
-                }
-            }
-
-            $recordId = $service->delRecord($req);
-        } catch (\Throwable $e) {
-            throw new \FOSSBilling\InformationException(
-                sprintf(
-                    'Failed to delete DNS record for "%s": %s',
-                    $domainName,
-                    $e->getMessage()
-                )
-            );
         }
+        if ($config['provider'] === 'PowerDNS' && $type === 'CNAME') $value = rtrim(trim($value), '.') . '.';
+        return [
+            'record_name' => $name, 'record_type' => $type, 'record_value' => $value,
+            'record_ttl' => $ttl, 'record_priority' => $type === 'MX' ? $priority : null,
+        ];
+    }
 
+    public function addRecord(array $data, $identity = null): bool
+    {
+        $model = $this->managedZone($data, $identity);
+        $config = $this->providerConfig($model);
+        $this->plex()->addRecord($this->recordData($data, $config) + $config);
+        return true;
+    }
+
+    public function updateRecord(array $data, $identity = null): bool
+    {
+        $model = $this->managedZone($data, $identity);
+        $record = $this->record($model, $data);
+        $config = $this->providerConfig($model);
+        // Record identity and old value come from the selected local row, not form values.
+        $data['record_name'] = $record->host;
+        $data['record_type'] = $record->type;
+        $data['record_priority'] ??= $record->priority;
+        $req = $this->recordData($data, $config);
+        $req['record_id'] = (int)$record->id;
+        $req['old_value'] = $record->value;
+        $this->plex()->updateRecord($req + $config);
+        return true;
+    }
+
+    public function delRecord(array $data, $identity = null): bool
+    {
+        $model = $this->managedZone($data, $identity);
+        $record = $this->record($model, $data);
+        $this->plex()->delRecord([
+            'record_id' => (int)$record->id, 'record_name' => $record->host,
+            'record_type' => $record->type, 'record_value' => $record->value,
+            'record_priority' => $record->priority,
+        ] + $this->providerConfig($model));
         return true;
     }
 
@@ -632,7 +319,7 @@ class Service implements InjectionAwareInterface
         CREATE TABLE IF NOT EXISTS `service_dns` (
             `id` BIGINT(20) NOT NULL AUTO_INCREMENT,
             `client_id` BIGINT(20) NOT NULL,
-            `domain_name` VARCHAR(75),
+            `domain_name` VARCHAR(253),
             `provider_id` VARCHAR(11),
             `zoneId` VARCHAR(100) DEFAULT NULL,
             `config` TEXT NOT NULL,
@@ -656,6 +343,7 @@ class Service implements InjectionAwareInterface
             FOREIGN KEY (`domain_id`) REFERENCES `service_dns`(`id`) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;';
         $this->di['db']->exec($sql);
+        $this->migrate();
 
         return true;
     }
@@ -671,14 +359,44 @@ class Service implements InjectionAwareInterface
         return true;
     }
 
-    private function isActive(OODBBean $model): bool
-    {
-        $order = $this->di['db']->findOne('ClientOrder', 'service_id = :id AND service_type = "dns"', [':id' => $model->id]);
-        if (is_null($order)) {
-            throw new \FOSSBilling\InformationException('DNS record does not exist');
-        }
 
-        return $order->status === 'active';
+    public function update(array $manifest): bool
+    {
+        return $this->install();
     }
 
+    private function migrate(): void
+    {
+        $pdo = $this->di['pdo'];
+        if ($pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql') {
+            $pdo->exec('ALTER TABLE service_dns MODIFY domain_name VARCHAR(253)');
+        }
+        $pdo->beginTransaction();
+        try {
+            // Keep credentials in the private service snapshot, never in client-visible orders.
+            $orders = $pdo->query("SELECT id, service_id, client_id, config, activated_at FROM client_order WHERE service_type = 'dns'");
+            foreach ($orders->fetchAll(\PDO::FETCH_ASSOC) as $order) {
+                $config = $this->decodeConfig($order['config']);
+                if ($order['service_id']) {
+                    $statement = $pdo->prepare('SELECT config FROM service_dns WHERE id = ? AND client_id = ?');
+                    $statement->execute([$order['service_id'], $order['client_id']]);
+                    $snapshot = $statement->fetchColumn();
+                    if ($snapshot !== false) {
+                        $private = array_replace($config, $this->decodeConfig($snapshot));
+                        if (!empty($order['activated_at'])) $private['_provisioned'] = true;
+                        $pdo->prepare('UPDATE service_dns SET config = ? WHERE id = ?')->execute([json_encode($private, JSON_THROW_ON_ERROR), $order['service_id']]);
+                    }
+                }
+                $pdo->prepare('UPDATE client_order SET config = ? WHERE id = ?')->execute([json_encode($this->publicConfig($config), JSON_THROW_ON_ERROR), $order['id']]);
+            }
+            $carts = $pdo->query("SELECT cp.id, cp.config FROM cart_product cp JOIN product p ON p.id = cp.product_id WHERE p.type = 'dns'");
+            foreach ($carts->fetchAll(\PDO::FETCH_ASSOC) as $cart) {
+                $pdo->prepare('UPDATE cart_product SET config = ? WHERE id = ?')->execute([json_encode($this->publicConfig($this->decodeConfig($cart['config'])), JSON_THROW_ON_ERROR), $cart['id']]);
+            }
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
 }
