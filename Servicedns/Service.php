@@ -310,6 +310,79 @@ class Service implements InjectionAwareInterface
         return true;
     }
 
+    public function getDnssec(array $data, $identity = null): array
+    {
+        $model = $this->managedZone($data, $identity);
+        $config = $this->providerConfig($model);
+        $plex = $this->plex();
+
+        $capabilities = $plex->getDNSSECCapabilities($config);
+
+        if (!$capabilities['supported']) {
+            return array_merge($capabilities, [
+                'enabled' => false,
+                'ds' => [],
+            ]);
+        }
+
+        $status = $plex->getDNSSECStatus($config);
+
+        $ds = $status['ds'] ?? null;
+
+        if ($ds === null) {
+            $ds = $plex->getDSRecords($config);
+        }
+
+        if ($ds === null || $ds === '') {
+            $ds = [];
+        } elseif (!is_array($ds)) {
+            $ds = [$ds];
+        }
+
+        return array_merge($capabilities, $status, [
+            'enabled' => (bool)($status['enabled'] ?? $capabilities['enforced']),
+            'ds' => $ds,
+        ]);
+    }
+
+    public function enableDnssec(array $data, $identity = null): bool
+    {
+        $model = $this->managedZone($data, $identity);
+        $config = $this->providerConfig($model);
+        $plex = $this->plex();
+
+        $capabilities = $plex->getDNSSECCapabilities($config);
+
+        if (!$capabilities['supported'] || !$capabilities['can_enable']) {
+            throw new \FOSSBilling\InformationException(
+                'DNSSEC cannot be enabled for this DNS provider.'
+            );
+        }
+
+        $plex->enableDNSSEC($config);
+
+        return true;
+    }
+
+    public function disableDnssec(array $data, $identity = null): bool
+    {
+        $model = $this->managedZone($data, $identity);
+        $config = $this->providerConfig($model);
+        $plex = $this->plex();
+
+        $capabilities = $plex->getDNSSECCapabilities($config);
+
+        if (!$capabilities['supported'] || !$capabilities['can_disable']) {
+            throw new \FOSSBilling\InformationException(
+                'DNSSEC cannot be disabled for this DNS provider.'
+            );
+        }
+
+        $plex->disableDNSSEC($config);
+
+        return true;
+    }
+
     /**
      * Creates the database structure to store the DNS records in.
      */

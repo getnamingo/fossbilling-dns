@@ -43,4 +43,28 @@ class Client extends \FOSSBilling\Api\AbstractApi
     {
         return $this->getService()->delRecord($data, $this->getIdentity());
     }
+
+    public function dnssec($data): array
+    {
+        return $this->getService()->getDnssec(
+            $data,
+            $this->getIdentity()
+        );
+    }
+
+    public function dnssec_enable($data): bool
+    {
+        return $this->getService()->enableDnssec(
+            $data,
+            $this->getIdentity()
+        );
+    }
+
+    public function dnssec_disable($data): bool
+    {
+        return $this->getService()->disableDnssec(
+            $data,
+            $this->getIdentity()
+        );
+    }
 }
