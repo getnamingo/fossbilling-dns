@@ -26,7 +26,7 @@ Most DNS providers **require an API key**, while some may need **additional sett
 ## Installation
 
 > [!WARNING]
-> **fossbilling-dns v1.2.5** requires **FOSSBilling v0.8.7+** and **PHP 8.3+**.
+> **fossbilling-dns v1.2.6** requires **FOSSBilling v0.8.7+** and **PHP 8.3+**.
 >
 > If you are using **FOSSBilling v0.7.2**, please use **fossbilling-dns v1.1.2** instead.
 
@@ -75,9 +75,9 @@ From your server:
 
 ```bash
 cd /tmp
-wget https://github.com/getnamingo/fossbilling-dns/releases/download/v1.2.5/fossbilling-dns-v1.2.5.tar.gz
-tar xzf fossbilling-dns-v1.2.5.tar.gz
-cd fossbilling-dns-v1.2.5
+wget https://github.com/getnamingo/fossbilling-dns/releases/download/v1.2.6/fossbilling-dns-v1.2.6.tar.gz
+tar xzf fossbilling-dns-v1.2.6.tar.gz
+cd fossbilling-dns-v1.2.6
 cp -a Servicedns/. /path/to/FOSSBilling/modules/Servicedns/
 cd /path/to/FOSSBilling
 php modules/Servicedns/upgrade.php

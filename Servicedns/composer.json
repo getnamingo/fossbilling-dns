@@ -7,15 +7,7 @@
         "php": ">=8.3",
         "namingo/plexdns": "^1.0.15"
     },
-    "require-dev": {
-        "gabordemooij/redbean": "^5.7.5",
-        "pimple/pimple": "^3.6",
-        "twig/twig": "^3.22"
-    },
     "config": {
         "allow-plugins": {"php-http/discovery": true}
-    },
-    "scripts": {
-        "test": "php ../tests/ServiceTest.php"
     }
 }
