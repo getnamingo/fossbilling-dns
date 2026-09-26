@@ -5,7 +5,7 @@
     "license": "Apache-2.0",
     "require": {
         "php": ">=8.3",
-        "namingo/plexdns": "dev-main#f1776a214a9e7e14a3e167495a978ae0b4977436"
+        "namingo/plexdns": "^1.0.14"
     },
     "require-dev": {
         "gabordemooij/redbean": "^5.7.5",

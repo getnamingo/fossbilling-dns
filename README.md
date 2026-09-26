@@ -13,20 +13,20 @@ Most DNS providers **require an API key**, while some may need **additional sett
 | Provider    | Credentials in .env | Requirements  | Status | DNSSEC |
 |------------|---------------------|------------|---------------------|---------------------|
 | **AnycastDNS** | `API_KEY` | | ✅ | ❌ |
-| **Bind9** | `API_KEY:BIND_IP` | [bind9-api-server](https://github.com/getnamingo/bind9-api-server)/[bind9-api-server-sqlite](https://github.com/getnamingo/bind9-api-server-sqlite) | ✅ | 🚧 |
+| **Bind9** | `API_KEY:BIND_IP` | [bind9-api](https://github.com/getnamingo/bind9-api) | ✅ | 🚧 |
 | **Bunny** | `API_KEY` | | ✅ | ✅ |
-| **Cloudflare** | `EMAIL:API_KEY` or `API_TOKEN` | | ✅ | ❌ |
+| **Cloudflare** | `EMAIL:API_KEY` or `API_TOKEN` | | ✅ | ✅ |
 | **ClouDNS** | `AUTH_ID:AUTH_PASSWORD` | | ✅ | ✅ |
 | **Desec** | `API_KEY` | | ✅ | ✅ |
-| **DNSimple** | `API_KEY` | | ✅ | ❌ |
-| **Hetzner** | `API_KEY` | | 🚧 | ❌ |
+| **DNSimple** | `API_KEY` | | ✅ | ✅ |
+| **Hetzner** | `API_KEY` | Hetzner Console project token (read/write) | ✅ | ❌ |
 | **PowerDNS** | `API_KEY:POWERDNS_IP` | gmysql-dnssec=yes in pdns.conf | ✅ | ✅ |
-| **Vultr** | `API_KEY` | | ✅ | ❌ |
+| **Vultr** | `API_KEY` | | ✅ | ✅ |
 
 ## Installation
 
 > [!WARNING]
-> **fossbilling-dns v1.2.4** requires **FOSSBilling v0.8.6+** and **PHP 8.3+**, and includes fixes for **FOSSBilling v0.8.7**.
+> **fossbilling-dns v1.2.5** requires **FOSSBilling v0.8.7+** and **PHP 8.3+**.
 >
 > If you are using **FOSSBilling v0.7.2**, please use **fossbilling-dns v1.1.2** instead.
 
@@ -75,9 +75,9 @@ From your server:
 
 ```bash
 cd /tmp
-wget https://github.com/getnamingo/fossbilling-dns/releases/download/v1.2.4/fossbilling-dns-v1.2.4.tar.gz
-tar xzf fossbilling-dns-v1.2.4.tar.gz
-cd fossbilling-dns-v1.2.4
+wget https://github.com/getnamingo/fossbilling-dns/releases/download/v1.2.5/fossbilling-dns-v1.2.5.tar.gz
+tar xzf fossbilling-dns-v1.2.5.tar.gz
+cd fossbilling-dns-v1.2.5
 cp -a Servicedns/. /path/to/FOSSBilling/modules/Servicedns/
 cd /path/to/FOSSBilling
 php modules/Servicedns/upgrade.php
