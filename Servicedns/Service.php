@@ -329,7 +329,7 @@ class Service implements InjectionAwareInterface
 
         $ds = $status['ds'] ?? null;
 
-        if ($ds === null) {
+        if ($ds === null || $ds === []) {
             $ds = $plex->getDSRecords($config);
         }
 

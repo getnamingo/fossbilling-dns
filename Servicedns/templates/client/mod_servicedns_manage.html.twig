@@ -259,7 +259,7 @@ function formatDsRecord(record) {
     return String(record);
 }
 
-function loadDnssec() {
+function loadDnssec(retries = 10) {
     FOSSBilling.api.client.post(
         'servicedns/dnssec',
         { order_id: {{ order.id }} },
@@ -337,6 +337,10 @@ function loadDnssec() {
                 dsSection.classList.remove('d-none');
             } else {
                 dsSection.classList.add('d-none');
+
+                if (result.enabled && retries > 0) {
+                    setTimeout(() => loadDnssec(retries - 1), 3000);
+                }
             }
         }
     );
