@@ -8,7 +8,7 @@ DNS hosting module for FOSSBilling
 
 ## Supported Providers
 
-Most DNS providers **require an API key**, while some may need **additional settings** such as authentication credentials or specific server configurations. All required values must be set in the `.env` file.
+Most DNS providers **require an API key**, while some may need **additional settings** such as authentication credentials or specific server configurations. All required values must be set in the module configuration.
 
 | Provider    | Credentials in .env | Requirements  | Status | DNSSEC |
 |------------|---------------------|------------|---------------------|---------------------|
@@ -42,7 +42,7 @@ Release archives include dependencies. When installing from source, run `compose
 
 ### (BIND9 Module only) 3. Installation of BIND9 API Server:
 
-To use the BIND9 module, you must install the [bind9-api-server](https://github.com/getnamingo/bind9-api-server) on your master BIND server. This API server allows for seamless integration and management of your DNS zones via API.
+To use the BIND9 module, you must install the [bind9-api](https://github.com/getnamingo/bind9-api) on your master BIND server. This API allows for seamless integration and management of your DNS zones via API.
 
 Make sure to configure the API server according to your BIND installation parameters to ensure proper synchronization of your DNS zones.
 
