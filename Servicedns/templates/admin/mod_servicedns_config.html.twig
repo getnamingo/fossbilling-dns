@@ -25,7 +25,7 @@
                 <p>{{ 'Enter your DNS provider\'s API key. Keep it confidential and ensure it\'s valid for requests.'|trans }}</p>
                 <label class="form-label col-3 col-form-label">{{ 'API Key'|trans }}:</label>
                 <div class="col">
-                    <input type="text" class="form-control" name="config[apikey]" value="{{ config.apikey|default('') }}">
+                    <input type="password" class="form-control" name="config[apikey]" value="{{ config.apikey|default('') }}">
                 </div>
             </div>
             <div class="mb-3 row">
