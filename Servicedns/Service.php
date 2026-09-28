@@ -329,7 +329,7 @@ class Service implements InjectionAwareInterface
 
         $ds = $status['ds'] ?? null;
 
-        if ($ds === null || $ds === []) {
+        if (($status['enabled'] ?? $capabilities['enforced']) && ($ds === null || $ds === [])) {
             $ds = $plex->getDSRecords($config);
         }
 
