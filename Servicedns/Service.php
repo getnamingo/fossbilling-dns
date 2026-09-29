@@ -314,9 +314,9 @@ class Service implements InjectionAwareInterface
     {
         $model = $this->managedZone($data, $identity);
         $config = $this->providerConfig($model);
-        $plex = $this->cardo();
+        $cardo = $this->cardo();
 
-        $capabilities = $plex->getDNSSECCapabilities($config);
+        $capabilities = $cardo->getDNSSECCapabilities($config);
 
         if (!$capabilities['supported']) {
             return array_merge($capabilities, [
@@ -325,12 +325,12 @@ class Service implements InjectionAwareInterface
             ]);
         }
 
-        $status = $plex->getDNSSECStatus($config);
+        $status = $cardo->getDNSSECStatus($config);
 
         $ds = $status['ds'] ?? null;
 
         if (($status['enabled'] ?? $capabilities['enforced']) && ($ds === null || $ds === [])) {
-            $ds = $plex->getDSRecords($config);
+            $ds = $cardo->getDSRecords($config);
         }
 
         if ($ds === null || $ds === '') {
@@ -349,9 +349,9 @@ class Service implements InjectionAwareInterface
     {
         $model = $this->managedZone($data, $identity);
         $config = $this->providerConfig($model);
-        $plex = $this->cardo();
+        $cardo = $this->cardo();
 
-        $capabilities = $plex->getDNSSECCapabilities($config);
+        $capabilities = $cardo->getDNSSECCapabilities($config);
 
         if (!$capabilities['supported'] || !$capabilities['can_enable']) {
             throw new \FOSSBilling\InformationException(
@@ -359,7 +359,7 @@ class Service implements InjectionAwareInterface
             );
         }
 
-        $plex->enableDNSSEC($config);
+        $cardo->enableDNSSEC($config);
 
         return true;
     }
@@ -368,9 +368,9 @@ class Service implements InjectionAwareInterface
     {
         $model = $this->managedZone($data, $identity);
         $config = $this->providerConfig($model);
-        $plex = $this->cardo();
+        $cardo = $this->cardo();
 
-        $capabilities = $plex->getDNSSECCapabilities($config);
+        $capabilities = $cardo->getDNSSECCapabilities($config);
 
         if (!$capabilities['supported'] || !$capabilities['can_disable']) {
             throw new \FOSSBilling\InformationException(
@@ -378,7 +378,7 @@ class Service implements InjectionAwareInterface
             );
         }
 
-        $plex->disableDNSSEC($config);
+        $cardo->disableDNSSEC($config);
 
         return true;
     }
