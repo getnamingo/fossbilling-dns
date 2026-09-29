@@ -4,7 +4,7 @@
   "name": "DNS Hosting Product",
   "description": "A product type to allow you to offer DNS hosting",
   "icon_url": "icon.svg",
-  "version": "1.2.6",
+  "version": "1.3.0",
   "minimum_fossbilling_version": "0.8.7",
   "author": "Namingo",
   "author_url": "https://namingo.org/"
