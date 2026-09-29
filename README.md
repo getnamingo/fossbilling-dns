@@ -8,14 +8,12 @@ DNS hosting module for FOSSBilling
 
 ## Supported Providers
 
-FOSSBilling DNS uses **Cardo DNS 1.1+** for provider integration. See the authoritative [Cardo DNS supported providers table](https://github.com/getnamingo/cardo-dns#supported-providers) for provider availability, credentials, requirements, and DNSSEC support.
-
-The FOSSBilling product settings expose DigitalOcean, Gandi LiveDNS, Scaleway, and all previously available Cardo DNS providers.
+FOSSBilling DNS uses **Cardo DNS** for provider integration. See the [Cardo DNS supported providers list](https://github.com/getnamingo/cardo-dns#supported-providers) for provider availability, credentials, requirements, and DNSSEC support.
 
 ## Installation
 
 > [!WARNING]
-> **fossbilling-dns v1.3.0** requires **FOSSBilling v0.8.7+** and **PHP 8.3+**.
+> **fossbilling-dns v1.2.7** requires **FOSSBilling v0.8.7+** and **PHP 8.3+**.
 >
 > If you are using **FOSSBilling v0.7.2**, please use **fossbilling-dns v1.1.2** instead.
 
@@ -73,9 +71,9 @@ From your server:
 
 ```bash
 cd /tmp
-wget https://github.com/getnamingo/fossbilling-dns/releases/download/v1.3.0/fossbilling-dns-v1.3.0.tar.gz
-tar xzf fossbilling-dns-v1.3.0.tar.gz
-cd fossbilling-dns-v1.3.0
+wget https://github.com/getnamingo/fossbilling-dns/releases/download/v1.2.7/fossbilling-dns-v1.2.7.tar.gz
+tar xzf fossbilling-dns-v1.2.7.tar.gz
+cd fossbilling-dns-v1.2.7
 cp -a Servicedns/. /path/to/FOSSBilling/modules/Servicedns/
 cd /path/to/FOSSBilling
 php modules/Servicedns/upgrade.php
