@@ -15,8 +15,11 @@
                         <option value="ClouDNS" {% if config.provider|default('') == 'ClouDNS' %}selected{% endif %}>ClouDNS</option>
                         <option value="Desec" {% if config.provider|default('') == 'Desec' %}selected{% endif %}>Desec</option>
                         <option value="DNSimple" {% if config.provider|default('') == 'DNSimple' %}selected{% endif %}>DNSimple</option>
+                        <option value="DigitalOcean" {% if config.provider|default('') == 'DigitalOcean' %}selected{% endif %}>DigitalOcean</option>
+                        <option value="GandiLiveDNS" {% if config.provider|default('') == 'GandiLiveDNS' %}selected{% endif %}>Gandi LiveDNS</option>
                         <option value="Hetzner" {% if config.provider|default('') == 'Hetzner' %}selected{% endif %}>Hetzner</option>
                         <option value="PowerDNS" {% if config.provider|default('') == 'PowerDNS' %}selected{% endif %}>PowerDNS</option>
+                        <option value="Scaleway" {% if config.provider|default('') == 'Scaleway' %}selected{% endif %}>Scaleway</option>
                         <option value="Vultr" {% if config.provider|default('') == 'Vultr' %}selected{% endif %}>Vultr</option>
                     </select>
                 </div>
@@ -29,12 +32,52 @@
                 </div>
             </div>
             <div class="mb-3 row">
+                <label class="form-label col-3 col-form-label">{{ 'AnycastDNS Server ID'|trans }}</label>
+                <div class="col">
+                    <input type="number" min="0" class="form-control" name="config[serverid]" value="{{ config.serverid|default(0) }}">
+                    <small class="form-hint">{{ 'Optional. Leave 0 unless your AnycastDNS account requires a specific server.'|trans }}</small>
+                </div>
+            </div>
+            <div class="mb-3 row">
                 <label class="form-label col-3 col-form-label">{{ 'ClouDNS authentication ID'|trans }}</label>
                 <div class="col"><input class="form-control" name="config[cloudns_auth_id]" value="{{ config.cloudns_auth_id|default('') }}"></div>
             </div>
             <div class="mb-3 row">
                 <label class="form-label col-3 col-form-label">{{ 'ClouDNS authentication password'|trans }}</label>
                 <div class="col"><input type="password" class="form-control" name="config[cloudns_auth_password]" value="{{ config.cloudns_auth_password|default('') }}" autocomplete="new-password"></div>
+            </div>
+            <div class="hr-text">
+              <span>{{ 'Scaleway and Gandi Additional Settings'|trans }}</span>
+            </div>
+            <div class="mb-3 row">
+                <label class="form-label col-3 col-form-label">{{ 'Scaleway Project ID'|trans }}</label>
+                <div class="col">
+                    <input class="form-control" name="config[project_id]" value="{{ config.project_id|default('') }}">
+                    <small class="form-hint">{{ 'Required only for Scaleway.'|trans }}</small>
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="form-label col-3 col-form-label">{{ 'Scaleway Parent Domain'|trans }}</label>
+                <div class="col">
+                    <input class="form-control" name="config[parent_domain]" value="{{ config.parent_domain|default('') }}">
+                    <small class="form-hint">{{ 'Optional. Usually leave empty for root-zone hosting.'|trans }}</small>
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="form-label col-3 col-form-label">{{ 'Gandi Sharing ID'|trans }}</label>
+                <div class="col">
+                    <input class="form-control" name="config[sharing_id]" value="{{ config.sharing_id|default('') }}">
+                    <small class="form-hint">{{ 'Optional Gandi organization sharing context.'|trans }}</small>
+                </div>
+            </div>
+            <div class="mb-3 row">
+                <label class="form-label col-3 col-form-label">{{ 'Gandi Auth Scheme'|trans }}</label>
+                <div class="col">
+                    <select class="form-select" name="config[auth_scheme]">
+                        <option value="Bearer" {% if config.auth_scheme|default('Bearer') == 'Bearer' %}selected{% endif %}>Bearer (recommended)</option>
+                        <option value="Apikey" {% if config.auth_scheme|default('Bearer') == 'Apikey' %}selected{% endif %}>Apikey (legacy)</option>
+                    </select>
+                </div>
             </div>
             <div class="hr-text">
               <span>BIND and PowerDNS Additional Settings</span>

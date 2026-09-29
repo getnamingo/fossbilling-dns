@@ -8,25 +8,14 @@ DNS hosting module for FOSSBilling
 
 ## Supported Providers
 
-Most DNS providers **require an API key**, while some may need **additional settings** such as authentication credentials or specific server configurations. All required values must be set in the module configuration.
+FOSSBilling DNS uses **Cardo DNS 1.1+** for provider integration. See the authoritative [Cardo DNS supported providers table](https://github.com/getnamingo/cardo-dns#supported-providers) for provider availability, credentials, requirements, and DNSSEC support.
 
-| Provider    | Credentials in .env | Requirements  | Status | DNSSEC |
-|------------|---------------------|------------|---------------------|---------------------|
-| **AnycastDNS** | `API_KEY` | | ✅ | ❌ |
-| **Bind9** | `API_KEY:BIND_IP` | [bind9-api](https://github.com/getnamingo/bind9-api) | ✅ | 🚧 |
-| **Bunny** | `API_KEY` | | ✅ | ✅ |
-| **Cloudflare** | `EMAIL:API_KEY` or `API_TOKEN` | | ✅ | ✅ |
-| **ClouDNS** | `AUTH_ID:AUTH_PASSWORD` | | ✅ | ✅ |
-| **Desec** | `API_KEY` | | ✅ | ✅ |
-| **DNSimple** | `API_KEY` | | ✅ | ✅ |
-| **Hetzner** | `API_KEY` | Hetzner Console project token (read/write) | ✅ | ❌ |
-| **PowerDNS** | `API_KEY:POWERDNS_IP` | gmysql-dnssec=yes in pdns.conf | ✅ | ✅ |
-| **Vultr** | `API_KEY` | | ✅ | ✅ |
+The FOSSBilling product settings expose DigitalOcean, Gandi LiveDNS, Scaleway, and all previously available Cardo DNS providers.
 
 ## Installation
 
 > [!WARNING]
-> **fossbilling-dns v1.2.6** requires **FOSSBilling v0.8.7+** and **PHP 8.3+**.
+> **fossbilling-dns v1.3.0** requires **FOSSBilling v0.8.7+** and **PHP 8.3+**.
 >
 > If you are using **FOSSBilling v0.7.2**, please use **fossbilling-dns v1.1.2** instead.
 
@@ -38,7 +27,7 @@ Start by downloading the latest version of FOSSBilling from the official website
 
 First, download this repository. After successfully downloading the repository, move the `Servicedns` directory into the `[FOSSBilling]/modules` directory.
 
-Release archives include dependencies. When installing from source, run `composer install --no-dev` inside `Servicedns` first. Use the committed lock file: it pins the PlexDNS revision containing the provider record-ID and Hetzner fixes, which are not in the current stable PlexDNS tag.
+Release archives include dependencies. When installing from source, run `composer update --no-dev` inside `Servicedns` first. Cardo DNS keeps the Composer package name `namingo/plexdns` for backward compatibility; this module requires `^1.1.0` and uses the native `Namingo\\Cardo\\DNS` namespace.
 
 ### (BIND9 Module only) 3. Installation of BIND9 API Server:
 
@@ -52,7 +41,16 @@ Within FOSSBilling, go to **Extensions -> Overview** and activate the `DNS Hosti
 
 Then go to **Products -> Products & Services -> New product** and create a new product of type `Dns`.
 
-Configure your product, and do not forget to select your DNS hosting provider and input the API key on the `Configuration` tab of your product.
+Configure your product, and select the DNS hosting provider plus its credentials on the `Configuration` tab.
+
+Provider-specific settings:
+- **AnycastDNS:** Server ID is optional and defaults to `0`.
+- **ClouDNS:** configure the authentication ID and authentication password.
+- **Scaleway:** **Project ID** is required; **Parent Domain** is optional and normally left empty for root-zone hosting.
+- **Gandi LiveDNS:** use the normal API key field for the token; **Sharing ID** is optional and **Bearer** is the recommended authentication scheme.
+- **DigitalOcean:** only the normal API key field is required.
+
+Provider credentials remain in the private product/service configuration and are not copied into client-visible cart or order configuration.
 
 ## Upgrade
 
@@ -75,9 +73,9 @@ From your server:
 
 ```bash
 cd /tmp
-wget https://github.com/getnamingo/fossbilling-dns/releases/download/v1.2.6/fossbilling-dns-v1.2.6.tar.gz
-tar xzf fossbilling-dns-v1.2.6.tar.gz
-cd fossbilling-dns-v1.2.6
+wget https://github.com/getnamingo/fossbilling-dns/releases/download/v1.3.0/fossbilling-dns-v1.3.0.tar.gz
+tar xzf fossbilling-dns-v1.3.0.tar.gz
+cd fossbilling-dns-v1.3.0
 cp -a Servicedns/. /path/to/FOSSBilling/modules/Servicedns/
 cd /path/to/FOSSBilling
 php modules/Servicedns/upgrade.php

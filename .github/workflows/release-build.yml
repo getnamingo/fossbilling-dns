@@ -21,10 +21,10 @@ jobs:
           php-version: "8.3"
           tools: composer:v2
 
-      - name: Install locked production dependencies
+      - name: Install production dependencies
         working-directory: Servicedns
         run: |
-          composer install --no-dev --no-interaction --no-progress --prefer-dist
+          composer update --no-dev --no-interaction --no-progress --prefer-dist
 
       - name: Build archives
         env:
