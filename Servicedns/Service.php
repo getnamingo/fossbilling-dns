@@ -21,7 +21,7 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 
 use FOSSBilling\InjectionAwareInterface;
 use RedBeanPHP\OODBBean;
-use PlexDNS\Service as PlexService;
+use Namingo\Cardo\DNS\Service as CardoService;
 
 class Service implements InjectionAwareInterface
 {
@@ -137,9 +137,9 @@ class Service implements InjectionAwareInterface
         return $model;
     }
 
-    protected function plex(): PlexService
+    protected function cardo(): CardoService
     {
-        return new PlexService($this->di['pdo']);
+        return new CardoService($this->di['pdo']);
     }
 
     private function providerConfig(OODBBean $model): array
@@ -149,7 +149,7 @@ class Service implements InjectionAwareInterface
         if (empty($config['domain_name']) || empty($config['provider'])) {
             throw new \FOSSBilling\InformationException('DNS domain/provider configuration is missing.');
         }
-        // Preserve ClouDNS authentication, SOA, nameservers and secondary server settings.
+        // Preserve all private provider credentials/settings from the service snapshot.
         return $config;
     }
 
@@ -157,8 +157,8 @@ class Service implements InjectionAwareInterface
     {
         $config = $this->providerConfig($model);
         if (!empty($config['_provisioned'])) return true;
-        $this->plex()->createDomain(['client_id' => $order->client_id, 'config' => json_encode($config, JSON_THROW_ON_ERROR)]);
-        // PlexDNS upserts the same row. Do not overwrite its new zoneId with the stale bean.
+        $this->cardo()->createDomain(['client_id' => $order->client_id, 'config' => json_encode($config, JSON_THROW_ON_ERROR)]);
+        // Cardo DNS upserts the same row. Do not overwrite its new zoneId with the stale bean.
         $model->setProperty('zoneId', $this->di['db']->getCell('SELECT zoneId FROM service_dns WHERE id = :id', [':id' => $model->id]));
         $config['_provisioned'] = true;
         $model->config = json_encode($config, JSON_THROW_ON_ERROR);
@@ -186,7 +186,7 @@ class Service implements InjectionAwareInterface
         if (!$model || !$model->id) return;
         $config = $this->providerConfig($model);
         if (!empty($config['_provisioned']) || ($order && !empty($order->activated_at))) {
-            $this->plex()->deleteDomain(['config' => json_encode($config, JSON_THROW_ON_ERROR)]);
+            $this->cardo()->deleteDomain(['config' => json_encode($config, JSON_THROW_ON_ERROR)]);
         }
         // Do not swallow provider failures or treat an unrelated 404 as successful deletion.
         $this->di['db']->trash($model);
@@ -278,7 +278,7 @@ class Service implements InjectionAwareInterface
     {
         $model = $this->managedZone($data, $identity);
         $config = $this->providerConfig($model);
-        $this->plex()->addRecord($this->recordData($data, $config) + $config);
+        $this->cardo()->addRecord($this->recordData($data, $config) + $config);
         return true;
     }
 
@@ -294,7 +294,7 @@ class Service implements InjectionAwareInterface
         $req = $this->recordData($data, $config);
         $req['record_id'] = (int)$record->id;
         $req['old_value'] = $record->value;
-        $this->plex()->updateRecord($req + $config);
+        $this->cardo()->updateRecord($req + $config);
         return true;
     }
 
@@ -302,7 +302,7 @@ class Service implements InjectionAwareInterface
     {
         $model = $this->managedZone($data, $identity);
         $record = $this->record($model, $data);
-        $this->plex()->delRecord([
+        $this->cardo()->delRecord([
             'record_id' => (int)$record->id, 'record_name' => $record->host,
             'record_type' => $record->type, 'record_value' => $record->value,
             'record_priority' => $record->priority,
@@ -314,7 +314,7 @@ class Service implements InjectionAwareInterface
     {
         $model = $this->managedZone($data, $identity);
         $config = $this->providerConfig($model);
-        $plex = $this->plex();
+        $plex = $this->cardo();
 
         $capabilities = $plex->getDNSSECCapabilities($config);
 
@@ -349,7 +349,7 @@ class Service implements InjectionAwareInterface
     {
         $model = $this->managedZone($data, $identity);
         $config = $this->providerConfig($model);
-        $plex = $this->plex();
+        $plex = $this->cardo();
 
         $capabilities = $plex->getDNSSECCapabilities($config);
 
@@ -368,7 +368,7 @@ class Service implements InjectionAwareInterface
     {
         $model = $this->managedZone($data, $identity);
         $config = $this->providerConfig($model);
-        $plex = $this->plex();
+        $plex = $this->cardo();
 
         $capabilities = $plex->getDNSSECCapabilities($config);
 
