@@ -20,7 +20,7 @@
 
 {% set nameservers = guest.servicedns_nameservers({product_id: product.id}) %}
 {% if nameservers %}
-<div class="card text-white bg-info mb-3">
+<div class="card mb-3">
   <div class="card-header"><h5 class="card-title">{{ 'Nameserver Setup'|trans }}</h5></div>
   <div class="card-body">
     <p class="card-text">{{ 'Set these nameservers at your domain registrar:'|trans }}</p>
