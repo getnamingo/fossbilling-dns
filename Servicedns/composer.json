@@ -5,7 +5,7 @@
     "license": "Apache-2.0",
     "require": {
         "php": ">=8.3",
-        "namingo/plexdns": "^1.1.0"
+        "namingo/plexdns": "^1.1.2"
     },
     "config": {
         "allow-plugins": {"php-http/discovery": true}
